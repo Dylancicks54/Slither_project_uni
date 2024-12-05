@@ -7,7 +7,7 @@ import java.util.*;
 import java.util.List;
 
 public class GameClient {
-    private static final String SERVER_IP = "localhost";
+    private static final String SERVER_IP = "10.227.219.242";
     private static final int SERVER_PORT = 12345;
     private Socket socket;
     private PrintWriter out;
@@ -19,21 +19,21 @@ public class GameClient {
 
     public GameClient() {
         try {
-            // Connessione al server
+            // Genera un nome unico per il giocatore
+            player.setId("Player_" + UUID.randomUUID().toString().substring(0, 8)); // Nome unico basato su UUID
             socket = new Socket(SERVER_IP, SERVER_PORT);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-            System.out.println("Connesso al server.");
+            System.out.println("Connesso al server come " + player.getId());
 
-            // Mostra la finestra di gioco
             SwingUtilities.invokeLater(this::showPreLobby);
-
-            // Avvia il listener per i messaggi del server
             new Thread(this::listenForMessages).start();
         } catch (IOException e) {
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Impossibile connettersi al server. Avvia il server e riprova.", "Errore di connessione", JOptionPane.ERROR_MESSAGE);
+            System.exit(0);
         }
+
     }
 
     private void showPreLobby() {
@@ -47,14 +47,10 @@ public class GameClient {
 
         // Listener per il pulsante Join
         joinButton.addActionListener(e -> {
-            out.println("JOIN Player1");
-            player = new Player("Player1", null);  // Posizione iniziale
-            player.setPosition(new Vector2D(400, 300)); // Posizione centrale nella finestra
-            gameState = new GameState(Collections.singletonList(player), new ArrayList<>(), new ArrayList<>());
+            out.println("JOIN " + player.getId()); // Invia il nome univoco al server
+            player = new Player(player.getId(), null);
+            player.setPosition(new Vector2D(Math.random() * 300, Math.random() * 300));
             entities.add(player);
-
-            System.out.println("Player creato: " + player.getPosition());
-
             preLobbyFrame.dispose();
             SwingUtilities.invokeLater(this::createGameWindow);
         });
@@ -71,25 +67,19 @@ public class GameClient {
             while ((message = in.readLine()) != null) {
                 System.out.println("Messaggio ricevuto dal server: " + message);
 
-                if (message.startsWith("INIT")) {
-                    // Gestisci messaggio INIT
+                if (message.startsWith("FULL_STATE")) {
                     String[] parts = message.split(" ");
-                    if (parts[1].equals("PLAYER")) {
-                        String playerId = parts[2];
-                        double x = Double.parseDouble(parts[3]);
-                        double y = Double.parseDouble(parts[4]);
-                        Player newPlayer = new Player(playerId, null);
-                        newPlayer.setPosition(new Vector2D(x, y));
-                        entities.add(newPlayer);
+                    String entityType = parts[1];
+
+                    switch (entityType) {
+                        case "PLAYER":
+                            updateOrCreatePlayer(parts[2], Double.parseDouble(parts[3]), Double.parseDouble(parts[4]));
+                            break;
                     }
                 } else if (message.startsWith("UPDATE")) {
-                    // Gestione messaggio UPDATE
                     String[] parts = message.split(" ");
                     if (parts[1].equals("PLAYER")) {
-                        String playerId = parts[2];
-                        double x = Double.parseDouble(parts[3]);
-                        double y = Double.parseDouble(parts[4]);
-                        updatePlayerPosition(playerId, x, y);
+                        updatePlayerPosition(parts[2], Double.parseDouble(parts[3]), Double.parseDouble(parts[4]));
                     }
                 }
             }
@@ -98,8 +88,25 @@ public class GameClient {
         }
     }
 
+    private void updateOrCreatePlayer(String playerId, double x, double y) {
+        Player player = findPlayerById(playerId);
+        if (player == null) {
+            player = new Player(playerId, null);
+            entities.add(player);
+        }
+        player.setPosition(new Vector2D(x, y));
+    }
 
+    private Player findPlayerById(String playerId) {
+        for (Entity entity : entities) {
+            if (entity instanceof Player && ((Player) entity).getId().equals(playerId)) {
+                return (Player) entity;
+            }
+        }
+        return null;
+    }
 
+    // Metodi simili per Bot e Food
     private void updatePlayerPosition(String playerId, double x, double y) {
         for (Entity entity : entities) {
             if (entity instanceof Player && ((Player) entity).getId().equals(playerId)) {

@@ -124,4 +124,7 @@ public class Player extends Entity {
         this.position = new Vector2D(position.x, position.y);
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
 }

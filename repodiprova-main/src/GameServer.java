@@ -63,37 +63,42 @@ public class GameServer {
             }
         }
 
+        private void sendFullState() {
+            synchronized (gameState) {
+                for (Player player : players) {
+                    out.println("FULL_STATE PLAYER " + player.getId() + " " + player.getPosition().x + " " + player.getPosition().y);
+                }
+
+            }
+        }
+
+
         @Override
         public void run() {
             try {
                 in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 out = new PrintWriter(clientSocket.getOutputStream(), true);
 
+                sendFullState(); // Invia lo stato completo al client connesso
+
                 String inputLine;
                 while ((inputLine = in.readLine()) != null) {
                     System.out.println("Ricevuto dal client: " + inputLine);
 
-                    // Gestisci le comunicazioni con il client
                     if (inputLine.startsWith("JOIN")) {
-                        String playerName = inputLine.split(" ")[1];
-                        Player newPlayer = new Player(playerName, null); // Crea un giocatore solo quando il client si connette
-                        players.add(newPlayer);
-
-                        // Invia l'aggiornamento del giocatore appena creato
-                        out.println("INIT PLAYER " + newPlayer.getId() + " " + newPlayer.getPosition().x + " " + newPlayer.getPosition().y);
-                    }
-
-                    // Aggiorna tutti i client con lo stato del gioco
-                    synchronized (players) {
-                        for (Player player : players) {
-                            out.println("UPDATE PLAYER " + player.getId() + " " + player.getPosition().x + " " + player.getPosition().y);
+                        String playerName = inputLine.split(" ")[1]; // Nome univoco inviato dal client
+                        Player newPlayer = new Player(playerName, null);
+                        newPlayer.setPosition(new Vector2D(Math.random() * 1000, Math.random() * 1000)); // Posizione iniziale randomica
+                        synchronized (players) {
+                            players.add(newPlayer);
                         }
+                        out.println("INIT PLAYER " + newPlayer.getId() + " " + newPlayer.getPosition().x + " " + newPlayer.getPosition().y);
+                        broadcast("UPDATE PLAYER " + newPlayer.getId() + " " + newPlayer.getPosition().x + " " + newPlayer.getPosition().y);
                     }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                // Rimuovi il client dalla lista quando si disconnette
                 synchronized (clients) {
                     clients.remove(this);
                 }
