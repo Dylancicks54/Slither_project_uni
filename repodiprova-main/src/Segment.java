@@ -30,9 +30,9 @@ public class Segment {
         }
 
     }
-    public boolean collidesWith(Segment other) {
+    public boolean collidesWith(Entity other) {
         double distance = this.position.distanceTo(other.getPosition());
-        return distance < (this.size + other.getSize());
+        return distance < (this.size + other.getSize()) /2;
     }
 
 
@@ -45,32 +45,3 @@ public class Segment {
 //        }
 //    }
 }
-/*public class Segment {
-    private Vector2D position;
-    private double size;
-
-    public Segment(Vector2D position, double size) {
-        this.position = position;
-        this.size = size;
-    }
-
-    public Vector2D getPosition() {
-        return position;
-    }
-
-    public double getSize() {
-        return size;
-    }
-
-    public void follow(Vector2D target) {
-        double dx = target.x - position.x;
-        double dy = target.y - position.y;
-        double distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance > size) {
-            position.x += dx / distance * size;
-            position.y += dy / distance * size;
-        }
-    }
-}
-*/

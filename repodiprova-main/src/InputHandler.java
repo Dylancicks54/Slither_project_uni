@@ -1,83 +1,80 @@
 import java.awt.*;
 import java.awt.event.*;
 
-public class InputHandler implements KeyListener, MouseListener, MouseMotionListener {
+public class InputHandler implements KeyListener, MouseMotionListener {
     private Player player;
+    private Canvas canvas;
 
     public InputHandler(Player player, Canvas canvas) {
         this.player = player;
-        canvas.addMouseMotionListener(this);
+        this.canvas = canvas;
         canvas.addKeyListener(this);
-    }
-
-    @Override
-    public void mouseDragged(MouseEvent e) {
-        updateAngle(e);
-    }
-
-    @Override
-    public void mouseMoved(MouseEvent e) {
-        updateAngle(e);
-    }
-
-    private void updateAngle(MouseEvent e) {
-        Point mousePosition = e.getPoint();
-        double angle = Math.atan2(mousePosition.y - player.getPosition().y, mousePosition.x - player.getPosition().x);
-        player.setAngle(Math.toDegrees(angle));
-    }
-
-    @Override
-    public void keyTyped(KeyEvent e) {
-
+        canvas.addMouseMotionListener(this);
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
+        if (player == null) return;
+
         int keyCode = e.getKeyCode();
-        if (keyCode == KeyEvent.VK_UP) {
-            player.getVelocity().y = -1; // Muove il giocatore su
-        } else if (keyCode == KeyEvent.VK_DOWN) {
-            player.getVelocity().y = 1; // Muove il giocatore giù
-        } else if (keyCode == KeyEvent.VK_LEFT) {
-            player.getVelocity().x = -1; // Muove il giocatore a sinistra
-        } else if (keyCode == KeyEvent.VK_RIGHT) {
-            player.getVelocity().x = 1; // Muove il giocatore a destra
+        switch (keyCode) {
+            case KeyEvent.VK_UP:
+                player.setVelocity(new Vector2D(player.getVelocity().x, -player.getSpeed()));
+                break;
+            case KeyEvent.VK_DOWN:
+                player.setVelocity(new Vector2D(player.getVelocity().x, player.getSpeed()));
+                break;
+            case KeyEvent.VK_LEFT:
+                player.setVelocity(new Vector2D(-player.getSpeed(), player.getVelocity().y));
+                break;
+            case KeyEvent.VK_RIGHT:
+                player.setVelocity(new Vector2D(player.getSpeed(), player.getVelocity().y));
+                break;
+            case KeyEvent.VK_SPACE:
+                player.activateBoost();
+                break;
         }
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
-        // Quando il tasto viene rilasciato, fermiamo il movimento
+        if (player == null) return;
+
         int keyCode = e.getKeyCode();
-        if (keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_DOWN) {
-            player.getVelocity().y = 0;
-        } else if (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT) {
-            player.getVelocity().x = 0;
+        switch (keyCode) {
+            case KeyEvent.VK_UP:
+            case KeyEvent.VK_DOWN:
+                player.setVelocity(new Vector2D(player.getVelocity().x, 0));
+                break;
+            case KeyEvent.VK_LEFT:
+            case KeyEvent.VK_RIGHT:
+                player.setVelocity(new Vector2D(0, player.getVelocity().y));
+                break;
+            case KeyEvent.VK_SPACE:
+                player.deactivateBoost();
+                break;
         }
     }
 
     @Override
-    public void mouseClicked(MouseEvent e) {
-
+    public void keyTyped(KeyEvent e) {
+        // Non utilizzato
     }
 
     @Override
-    public void mousePressed(MouseEvent e) {
+    public void mouseMoved(MouseEvent e) {
+        if (player == null) return;
 
+        // Calcola l'angolo tra il centro del canvas e la posizione del mouse
+        Point mousePosition = e.getPoint();
+        Point canvasCenter = new Point(canvas.getWidth() / 2, canvas.getHeight() / 2);
+
+        double angle = Math.atan2(mousePosition.y - canvasCenter.y, mousePosition.x - canvasCenter.x);
+        player.setAngle(Math.toDegrees(angle));  // Imposta l'angolo del giocatore
     }
 
     @Override
-    public void mouseReleased(MouseEvent e) {
-
-    }
-
-    @Override
-    public void mouseEntered(MouseEvent e) {
-
-    }
-
-    @Override
-    public void mouseExited(MouseEvent e) {
-
+    public void mouseDragged(MouseEvent e) {
+        mouseMoved(e);  // Gestisce anche il movimento del mouse durante il drag
     }
 }

@@ -14,6 +14,10 @@ public abstract class Entity {
     public double getSize() {
         return size;
     }
+
+    public void setPosition(Vector2D vector2D) {
+        position = vector2D;
+    }
 }
 /*public abstract class Entity {
     protected Vector2D position;

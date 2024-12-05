@@ -15,159 +15,259 @@ public class GameState {
     }
 
     public void updateGameState() {
+        long startTime = System.nanoTime();  // Inizio temporale
+        System.out.println("Inizio aggiornamento stato del gioco.");
+
+        // Aggiornamento della posizione dei giocatori
         for (Player player : players) {
-            player.update();
+            player.update();  // Aggiorna la posizione, velocità, ecc.
         }
+
+        // Aggiornamento dei bot
         for (Bot bot : bots) {
             bot.update();
-
         }
+
+        // Gestione delle collisioni (se c'è)
         checkCollisions();
+
+        // Respawn del cibo
         respawnFood();
+
+        long elapsedTime = System.nanoTime() - startTime;
+        System.out.println("Tempo aggiornamento stato di gioco (ns): " + elapsedTime);  // Visualizza in nanosecondi
+        System.out.println("Tempo aggiornamento stato di gioco (ms): " + elapsedTime / 1_000_000);  // Converte in millisecondi
     }
 
 
+
+
     public void checkCollisions() {
-        // Liste temporanee per aggiungere o rimuovere in modo sicuro
         List<Bot> botsToAdd = new ArrayList<>();
         List<Bot> botsToRemove = new ArrayList<>();
         List<Player> playersToRemove = new ArrayList<>();
 
-        // Controlla collisioni tra giocatori e cibo
-        Iterator<Player> playerIterator = players.iterator();
-        while (playerIterator.hasNext()) {
-            Player player = playerIterator.next();
+        for (Player player : players) {
             Iterator<Food> foodIterator = foodItems.iterator();
             while (foodIterator.hasNext()) {
                 Food food = foodIterator.next();
                 if (player.collidesWith(food)) {
                     player.grow();
-                    foodIterator.remove(); // Rimuovi il cibo mangiato
+                    foodIterator.remove();
                 }
             }
         }
 
-        // Controlla collisioni tra bot e cibo
-        Iterator<Bot> botIterator = bots.iterator();
-        while (botIterator.hasNext()) {
-            Bot bot = botIterator.next();
+        // Collisioni tra bot e cibo
+        for (Bot bot : bots) {
             Iterator<Food> foodIterator = foodItems.iterator();
             while (foodIterator.hasNext()) {
                 Food food = foodIterator.next();
                 if (bot.collidesWith(food)) {
                     bot.grow();
-                    foodIterator.remove(); // Rimuovi il cibo mangiato
+                    foodIterator.remove();
                 }
             }
+        }
 
-            // Controlla collisioni tra bot e altri bot
-            boolean isRemoved = false;
-            Iterator<Bot> otherBotIterator = bots.iterator();
-            while (otherBotIterator.hasNext()) {
-                Bot otherBot = otherBotIterator.next();
+        // Collisioni tra bot e altri bot
+        for (Bot bot : bots) {
+            for (Bot otherBot : bots) {
                 if (bot != otherBot && bot.collidesWith(otherBot)) {
-                    isRemoved = true;
+                    botsToRemove.add(bot);
+                    botsToAdd.add(Bot.createBot(this, null)); // Genera un nuovo bot
                     break;
-
                 }
             }
+        }
 
-            // Se il bot è rimosso, aggiungilo alla lista di rimozione
-            if (isRemoved) {
-                botsToRemove.add(bot);
-                botsToAdd.add(new Bot(new Vector2D(Math.random() * 800, Math.random() * 600), this, null)); // Aggiungi un nuovo bot
-            }
-
-            // Controlla collisioni tra bot e segmenti dei giocatori
+        // Collisioni tra bot e segmenti dei giocatori
+        for (Bot bot : bots) {
             for (Player player : players) {
                 for (Segment segment : player.getBodySegments()) {
-                    if (bot.getPosition().distanceTo(segment.getPosition()) < (bot.getSize() / 2 + (double) player.getSegmentSize() / 2)) {
-                        botsToRemove.add(bot); // Rimuovi il bot dalla lista
+                    if (checkCollisionSegmentBot(bot, segment)) {
+                        botsToRemove.add(bot);
+                        botsToAdd.add(Bot.createBot(this, null)); // Genera un nuovo bot
                         break;
                     }
                 }
             }
         }
 
-        // Applicare le modifiche a bots: rimuovere i bot e aggiungere quelli nuovi
-        bots.removeAll(botsToRemove); // Rimuove tutti i bot che sono stati segnati per la rimozione
+        // Collisioni tra bot e segmenti di altri bot
+        for (Bot bot : bots) {
+            for (Bot otherBot : bots) {
+                if (bot != otherBot) { // Evita il confronto con se stesso
+                    for (Segment segment : otherBot.getBodySegments()) {
+                        if (checkCollisionSegmentBot(bot, segment)) {
+                            botsToRemove.add(bot);
+                            botsToAdd.add(Bot.createBot(this, null)); // Genera un nuovo bot
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        for (Player player : players) {
+            for (Player otherPlayer : players) {
+                if (player != otherPlayer) { // Evita il confronto con se stesso
+                    for (Segment segment : otherPlayer.getBodySegments()) {
+                        if (checkCollisionSegmentPlayer(player, segment)) {
+                            playersToRemove.add(player);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Collisioni tra giocatori e bot
+        for (Player player : players) {
+            for (Bot bot : bots) {
+                if (player.collidesWith(bot)) {
+                    playersToRemove.add(player);
+                    break;
+                }
+            }
+        }
+        // Collisioni tra bot e segmenti di altri bot
+        for (Player player : players) {
+            for (Bot bot : bots) {
+                    for (Segment segment : bot.getBodySegments()) {
+                        if (checkCollisionSegmentPlayer(player,segment)) {
+                            playersToRemove.add(player);
+                            break;
+                        }
+                    }
+
+            }
+        }
+
+        // Applica le modifiche
+        bots.removeAll(botsToRemove);
         bots.addAll(botsToAdd);
-        // Aggiungi i nuovi bot
-
-        // Controlla collisioni tra giocatori e bot
-        Iterator<Player> playerIterator2 = players.iterator();
-        while (playerIterator2.hasNext()) {
-            Player player = playerIterator2.next();
-            Iterator<Bot> botIterator2 = bots.iterator();
-            while (botIterator2.hasNext()) {
-                Bot bot = botIterator2.next();
-                if (player.collidesWith(bot)) {
-                    playersToRemove.add(player); // Segna il giocatore per la rimozione
-                    break; // Esci dal ciclo una volta che il giocatore è stato rimosso
-                }
-            }
-        }
-
-        // Rimuovi i giocatori segnati per la rimozione
         players.removeAll(playersToRemove);
+    }
+
+    /**
+     * Metodo per verificare la collisione tra un bot e un segmento. Necessaria se non voglio creare una classe EntitywithMovement o altra classe segment
+     *
+     * @param bot     Il bot da controllare.
+     * @param segment Il segmento da controllare.
+     * @return true se il bot collide con il segmento, false altrimenti.
+     */
+    private boolean checkCollisionSegmentBot(Bot bot, Segment segment) {
+        double distance = bot.getPosition().distanceTo(segment.getPosition());
+        double collisionDistance = bot.getSize() / 2.0 + segment.getSize() / 2.0;
+        return distance < collisionDistance;
+    }
+    private boolean checkCollisionSegmentPlayer(Player player, Segment segment) {
+        double distance = player.getPosition().distanceTo(segment.getPosition());
+        double collisionDistance = player.getSize() / 2.0 + segment.getSize() / 2.0;
+        return distance < collisionDistance;
+    }
 
 
+    public void respawnFood() {
+        final int MAX_FOOD_ITEMS = 10;
 
-
-    // Controlla collisioni tra giocatori e bot
-        playerIterator = players.iterator(); // Nuovo iteratore per i giocatori
-        while (playerIterator.hasNext()) {
-            Player player = playerIterator.next();
-            Iterator<Bot> botIterator2 = bots.iterator(); // Iteratore per i bot
-            while (botIterator2.hasNext()) {
-                Bot bot = botIterator2.next();
-                if (player.collidesWith(bot)) {
-                    playerIterator.remove(); // Rimuovi il giocatore
-                    return; // Esci dal metodo se il giocatore è morto
-                }
-            }
-        }
-        }
-    public void respawnFood () {
-        while (foodItems.size() < 10) { // Assicurati di avere sempre almeno 10 cibi
+        while (foodItems.size() < MAX_FOOD_ITEMS) {
             foodItems.add(new Food(new Vector2D(Math.random() * 800, Math.random() * 600), 10));
         }
     }
-    public void render(Graphics g) {
+
+    public void render(Graphics g, Player player) {
+        Graphics2D g2 = (Graphics2D) g;
+
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        if (player == null) {
+            g.setColor(Color.RED);
+            Font font = new Font("Arial", Font.PLAIN, 70);  // Font, stile e dimensione
+            g2.setFont(font);
+            g.drawString("SEI MORTO", 100, 100);
+            return;
+        }
+
+        Vector2D playerPosition = player.getPosition();
+
+        // Dimensioni della finestra
+        int screenWidth = 1920;
+        int screenHeight = 1080;
+
+        // Calcola l'offset per centrare il giocatore del client
+        int offsetX = (int) playerPosition.x - screenWidth / 2;
+        int offsetY = (int) playerPosition.y - screenHeight / 2;
+
+        // Disegna lo sfondo
+        g2.setColor(Color.DARK_GRAY);
+        g2.fillRect(0, 0, 8000, 8000);
+
+        // Disegna la griglia dei pentagoni
+        g2.setColor(Color.WHITE);
+        double angleIncrement = Math.PI * 2 / 5;
+        double radius = 100 / 2.0;
+
+        double xOffset = 75 * 1.5;
+        double yOffset = 75 * Math.sqrt(3);
+
+        for (int row = -30; row < 8000 / yOffset; row++) {
+            for (int col = -30; col < 8000 / xOffset; col++) {
+                double xShift = (row % 2 == 0) ? 0 : xOffset / 2;
+                double centerX = col * xOffset + xShift;
+                double centerY = row * yOffset;
+
+                Polygon pentagon = new Polygon();
+                for (int i = 0; i < 5; i++) {
+                    double angle = i * angleIncrement - Math.PI / 2;
+                    int x = (int) (centerX + Math.cos(angle) * radius) - offsetX;
+                    int y = (int) (centerY + Math.sin(angle) * radius) - offsetY;
+                    pentagon.addPoint(x, y);
+                }
+                g2.drawPolygon(pentagon);
+            }
+        }
+
         // Disegna il cibo
-        g.setColor(Color.GREEN);
+        g2.setColor(Color.GREEN);
         for (Food food : foodItems) {
-            g.fillOval((int) food.getPosition().x, (int) food.getPosition().y, (int) food.getSize(), (int) food.getSize());
+            int foodX = (int) food.getPosition().x - offsetX;
+            int foodY = (int) food.getPosition().y - offsetY;
+            g2.fillOval(foodX, foodY, (int) food.getSize(), (int) food.getSize());
         }
 
         // Disegna il giocatore
-        for (Player player : players) {
-            for (int i = 0; i < player.segments.size(); i++) {
-                Segment segment = player.segments.get(i);
+        for (Player players : players) {
+            for (int i = 0; i < players.segments.size(); i++) {
+                Segment segment = players.segments.get(i);
+                int segmentX = (int) segment.getPosition().x - offsetX;
+                int segmentY = (int) segment.getPosition().y - offsetY;
                 if (i == 0) {
-                    g.setColor(Color.YELLOW);
+                    g2.setColor(Color.YELLOW);
                 } else {
-                    // Disegna il corpo del serpente con colore diverso (blu)
-                    g.setColor(Color.BLUE);
+                    g2.setColor(Color.BLUE);
                 }
-
-                g.fillOval((int) segment.getPosition().x, (int) segment.getPosition().y, (int) segment.getSize(), (int) segment.getSize());
+                g2.fillOval(segmentX, segmentY, (int) segment.getSize(), (int) segment.getSize());
             }
         }
 
-
         // Disegna i bot
-        g.setColor(Color.RED);
+        g2.setColor(Color.RED);
         for (Bot bot : bots) {
             for (int i = 0; i < bot.segments.size(); i++) {
                 Segment segment = bot.segments.get(i);
-
-                g.fillOval((int) segment.getPosition().x, (int) segment.getPosition().y, (int) segment.getSize(), (int) segment.getSize());
+                int segmentX = (int) segment.getPosition().x - offsetX;
+                int segmentY = (int) segment.getPosition().y - offsetY;
+                g2.fillOval(segmentX, segmentY, (int) segment.getSize(), (int) segment.getSize());
             }
-            g.fillOval((int) bot.getPosition().x, (int) bot.getPosition().y, (int) bot.getSize(), (int) bot.getSize());
+            int botX = (int) bot.getPosition().x - offsetX;
+            int botY = (int) bot.getPosition().y - offsetY;
+            g2.fillOval(botX, botY, (int) bot.getSize(), (int) bot.getSize());
         }
     }
-        public List<Food> getFoodItems () {
+
+
+    public List<Food> getFoodItems () {
             return foodItems;
         }
 
@@ -175,5 +275,16 @@ public class GameState {
             return bots;
         }
 
+    public List<Entity> getAllEntities() {
+        List<Entity> allEntities = new ArrayList<>();
+        allEntities.addAll(players);
+        allEntities.addAll(bots);
+        allEntities.addAll(foodItems);
+        return allEntities;
     }
+
+    public List<Player> getPlayers() {
+        return players;
+    }
+}
 

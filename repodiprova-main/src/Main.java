@@ -18,17 +18,16 @@ public class Main {
 
         // Aggiungi qualche bot
         GameState gameState = new GameState(players, bots, foodItems);
-        bots.add(new Bot(new Vector2D(100, 100), gameState, null));
-        bots.add(new Bot(new Vector2D(200, 400), gameState, null));
+        for(int i = 0; i< 5; i++){
+            bots.add(new Bot(new Vector2D(Math.random() * 3000, Math.random() * 3000), gameState, null));
+        }
+        for(int i = 0; i< 200; i++){
+            foodItems.add(new Food(new Vector2D(Math.random() * 5000, Math.random() * 5000), 10));
+        }
 
-
-        // Aggiungi qualche cibo
-        foodItems.add(new Food(new Vector2D(300, 300), 10));
-        foodItems.add(new Food(new Vector2D(400, 400), 15));
 
         // Crea la finestra del gioco
         JFrame gameWindow = new JFrame("Slither Game");
-        gameWindow.setSize(1920, 1080); // Dimensione della finestra
         gameWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 
@@ -42,7 +41,7 @@ public class Main {
                 super.paint(g);
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                gameState.render(g2);
+                gameState.render(g2,player);
                 // Disegna lo stato del gioco
             }
 
@@ -93,7 +92,7 @@ public class Main {
                     Graphics2D g2 = (Graphics2D) g;
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                     g2.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-                    gameState.render(g2); // Disegna lo stato del gioco
+                    gameState.render(g2, player); // Disegna lo stato del gioco
                 } finally {
                     g.dispose();
                 }

@@ -32,7 +32,7 @@ public class AIController {
         for (Entity food : bot.getGameState().getFoodItems()) {
             double distance = bot.getPosition().distanceTo(food.getPosition());
             System.out.println("Food position: " + food.getPosition() + ", Bot position: " + bot.getPosition() + ", Distance: " + distance);
-            if (distance < 500) {  // Raggio di rilevamento maggiore
+            if (distance < 50000) {  // Raggio di rilevamento maggiore
                 nearbyEntities.add(food);
                 System.out.println("Added food to nearbyEntities: " + food.getPosition());
             }
@@ -43,7 +43,7 @@ public class AIController {
             if (bot != otherBot) {
                 double distance = bot.getPosition().distanceTo(otherBot.getPosition());
                 System.out.println("Other bot position: " + otherBot.getPosition() + ", Distance: " + distance);
-                if (distance < 300) {
+                if (distance < 30000) {
                     nearbyEntities.add(otherBot);
                     System.out.println("Added bot to nearbyEntities: " + otherBot.getPosition());
                 }

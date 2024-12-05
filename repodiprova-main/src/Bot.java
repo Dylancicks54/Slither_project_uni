@@ -23,20 +23,32 @@ public class Bot extends Entity {
         this.segments.add(new Segment(position, 10, segmentTexture));
     }
 
-//    public Bot creaBot(){
-//
-//    }
+    public static Bot createBot(GameState gameState, Image segmentTexture) {
+        Vector2D newPosition;
+        boolean positionValid;
+        do {
+            newPosition = new Vector2D(Math.random() * 800, Math.random() * 600);
+            positionValid = true;
+            for (Entity entity : gameState.getAllEntities()) {
+                if (newPosition.distanceTo(entity.getPosition()) < 50) {
+                    positionValid = false;
+                    break;
+                }
+            }
+        } while (!positionValid);
+
+        return new Bot(newPosition, gameState, segmentTexture);
+    }
+
+
     @Override
     public void update() {
-        // Logica per il movimento del bot, rilevamento del cibo e altre azioni
-        //this.move();
         controller.decideBehavior();
         calculateNextMove();
         move();
     }
 
     public void move() {
-        // Esempio di movimento: aggiorna la posizione del bot (questa è una logica di base)
         position.x += velocity.x;
         position.y += velocity.y;
 
@@ -69,6 +81,9 @@ public class Bot extends Entity {
         this.velocity = direction.scale(this.speed); // Imposta la velocità basandosi sulla direzione
     }
 
+    public List<Segment> getBodySegments() {
+        return segments;
+    }
 
     public Vector2D getVelocity() {
         return velocity;

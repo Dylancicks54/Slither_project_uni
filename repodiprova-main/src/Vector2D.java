@@ -33,6 +33,22 @@ public class Vector2D {
     public String toString() {
         return "Vector2D{" + "x=" + x + ", y=" + y + '}';
     }
+
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public Vector2D set(double x, double y) {
+        return new Vector2D(x, y);
+    }
+
+    public void setY(double y) {
+        this.y = y;
+    }
 }
 
 
