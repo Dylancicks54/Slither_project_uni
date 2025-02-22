@@ -6,9 +6,9 @@ public class AIController {
     private List<Entity> nearbyEntities; // Lista delle entità vicine
 
     // Modifica del costruttore per inizializzare la lista
-    public AIController(Bot bot) {
+    public AIController(Bot bot,List<Entity> nearbyEntities) {
         this.bot = bot;
-        this.nearbyEntities = new ArrayList<>();  // Inizializziamo la lista
+        this.nearbyEntities = nearbyEntities;  // Inizializziamo la lista
     }
 
     // Metodo che decide il comportamento del bot
@@ -31,10 +31,8 @@ public class AIController {
         // Controlla ogni cibo
         for (Entity food : bot.getGameState().getFoodItems()) {
             double distance = bot.getPosition().distanceTo(food.getPosition());
-            System.out.println("Food position: " + food.getPosition() + ", Bot position: " + bot.getPosition() + ", Distance: " + distance);
-            if (distance < 50000) {  // Raggio di rilevamento maggiore
+            if (distance < 9000) {  // Raggio di rilevamento maggiore
                 nearbyEntities.add(food);
-                System.out.println("Added food to nearbyEntities: " + food.getPosition());
             }
         }
 
@@ -42,10 +40,8 @@ public class AIController {
         for (Entity otherBot : bot.getGameState().getBots()) {
             if (bot != otherBot) {
                 double distance = bot.getPosition().distanceTo(otherBot.getPosition());
-                System.out.println("Other bot position: " + otherBot.getPosition() + ", Distance: " + distance);
-                if (distance < 30000) {
+                if (distance < 9000) {
                     nearbyEntities.add(otherBot);
-                    System.out.println("Added bot to nearbyEntities: " + otherBot.getPosition());
                 }
             }
         }
@@ -68,24 +64,20 @@ public class AIController {
 
     // Metodo per cercare il cibo
     public void seekFood() {
-        Entity closestFood = null;
+        Food closestFood = null;
         double minDistance = Double.MAX_VALUE;
 
         for (Entity entity : nearbyEntities) {
             if (entity instanceof Food) {
-                Food food = (Food) entity;
-                if (food.getClaimedBy() == null || food.getClaimedBy() == bot) {
-                    double distance = bot.getPosition().distanceTo(food.getPosition());
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        closestFood = food;
-                    }
+                double distance = bot.getPosition().distanceTo(entity.getPosition());
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestFood = (Food) entity;
                 }
             }
         }
 
         if (closestFood != null) {
-            ((Food) closestFood).setClaimedBy(bot); // Rivendica il cibo
             bot.moveTowards(closestFood.getPosition());
         }
     }

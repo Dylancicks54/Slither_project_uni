@@ -7,17 +7,16 @@ public class Player extends Entity {
     List<Segment> segments = new ArrayList<>();
     private double speed = 2.5;
     private double angle = 0.0;
-    private Image segmentTexture;
     private boolean isBoosting = false; // Flag per verificare se il boost è attivo
     private boolean isCooldown = false; // Flag per verificare se l'abilità è in cooldown
     private long boostStartTime = 0; // Timestamp dell'inizio del boost
-    private long cooldownEndTime = 0; // Timestamp della fine del cooldown
+    private long cooldownEndTime = 0;
+    private boolean isAlive = true;// Timestamp della fine del cooldown
 
-    public Player(String id, Image segmentTexture) {
+    public Player(String id) {
         this.id = id;
-        this.segmentTexture = segmentTexture;
         this.position = new Vector2D(Math.random() * 1000, Math.random() * 1000); // Posizione iniziale
-        this.segments.add(new Segment(position, 10, segmentTexture)); // Segmento iniziale
+        this.segments.add(new Segment(position, 17)); // Segmento iniziale
     }
 
     public String getId() {
@@ -90,7 +89,7 @@ public class Player extends Entity {
 
     public void grow() {
         Segment lastSegment = segments.get(segments.size() - 1);
-        segments.add(new Segment(new Vector2D(lastSegment.getPosition().x, lastSegment.getPosition().y), lastSegment.getSize(), segmentTexture));
+        segments.add(new Segment(new Vector2D(lastSegment.getPosition().x, lastSegment.getPosition().y), lastSegment.getSize()));
         if (speed > 2) speed -= 0.03;
     }
 
@@ -126,5 +125,13 @@ public class Player extends Entity {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public boolean isAlive() {
+        return isAlive;
+    }
+
+    public void setAlive(boolean alive) {
+        isAlive = alive;
     }
 }

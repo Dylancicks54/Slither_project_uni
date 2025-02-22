@@ -11,25 +11,23 @@ public class Bot extends Entity {
     List<Segment> segments = new ArrayList<>();
 
 
-    public Bot(Vector2D startPosition,GameState gameState, Image segmentTexture) {
+    public Bot(Vector2D startPosition, List<Entity> entities) {
         this.position = startPosition;
-        this.size = 10;
+        this.size = 17;
         this.velocity = new Vector2D(0, 0);
-        this.segmentTexture = segmentTexture;
         this.currentState = State.IDLE;
-        this.controller = new AIController(this);
-        this.gameState = gameState;
+        this.controller = new AIController(this, entities); // Passiamo solo le entità
         this.speed = 2.5;
-        this.segments.add(new Segment(position, 10, segmentTexture));
+        this.segments.add(new Segment(position, 17));
     }
 
-    public static Bot createBot(GameState gameState, Image segmentTexture) {
+    public static Bot createBot(List<Entity> entities) {
         Vector2D newPosition;
         boolean positionValid;
         do {
             newPosition = new Vector2D(Math.random() * 800, Math.random() * 600);
             positionValid = true;
-            for (Entity entity : gameState.getAllEntities()) {
+            for (Entity entity : entities) {
                 if (newPosition.distanceTo(entity.getPosition()) < 50) {
                     positionValid = false;
                     break;
@@ -37,7 +35,7 @@ public class Bot extends Entity {
             }
         } while (!positionValid);
 
-        return new Bot(newPosition, gameState, segmentTexture);
+        return new Bot(newPosition, entities);
     }
 
 
@@ -60,7 +58,7 @@ public class Bot extends Entity {
 
     public void grow() {
         Segment lastSegment = segments.get(segments.size() - 1);
-        segments.add(new Segment(new Vector2D(lastSegment.getPosition().x, lastSegment.getPosition().y), lastSegment.getSize(), segmentTexture));
+        segments.add(new Segment(new Vector2D(lastSegment.getPosition().x, lastSegment.getPosition().y), lastSegment.getSize()));
         if(speed > 2) speed -= 0.03;
 
     }

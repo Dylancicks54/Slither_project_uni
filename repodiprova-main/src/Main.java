@@ -1,4 +1,4 @@
-import javax.swing.*;
+/*import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferStrategy;
 import java.util.ArrayList;
@@ -18,11 +18,11 @@ public class Main {
 
         // Aggiungi qualche bot
         GameState gameState = new GameState(players, bots, foodItems);
-        for(int i = 0; i< 5; i++){
-            bots.add(new Bot(new Vector2D(Math.random() * 3000, Math.random() * 3000), gameState, null));
+        for(int i = 0; i< 3; i++){
+            bots.add(new Bot(new Vector2D(Math.random() * 800, Math.random() * 800), gameState, null));
         }
-        for(int i = 0; i< 200; i++){
-            foodItems.add(new Food(new Vector2D(Math.random() * 5000, Math.random() * 5000), 10));
+        for(int i = 0; i< 50; i++){
+            foodItems.add(new Food(new Vector2D(Math.random() * 1000, Math.random() * 1000), 10));
         }
 
 
@@ -43,6 +43,9 @@ public class Main {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 gameState.render(g2,player);
                 // Disegna lo stato del gioco
+                if(!player.isAlive()){
+                    g2.drawString("Sei Morto",150,150);
+                }
             }
 
         };
@@ -123,3 +126,5 @@ public class Main {
         System.out.println("Inizio del gioco...");
     }
 }
+
+ */

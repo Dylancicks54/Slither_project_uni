@@ -3,12 +3,12 @@ import java.awt.*;
 public class Segment {
     private Vector2D position;
     private double size;
-    private Image texture;
 
-    public Segment(Vector2D position, double size, Image texture) {
+
+    public Segment(Vector2D position, double size) {
         this.position = position;
         this.size = size;
-        this.texture = texture;
+
     }
 
     public Vector2D getPosition() {
