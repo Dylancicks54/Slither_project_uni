@@ -24,24 +24,21 @@ public class Segment {
         double dy = target.y - position.y;
         double distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance > size) {
-            position.x += dx / distance * size;
-            position.y += dy / distance * size;
-        }
+        double followDistance = size * 0.8; // Rende il follow più compatto (puoi regolare 0.8)
 
+        if (distance > followDistance) {
+            position.x += dx / distance * followDistance;
+            position.y += dy / distance * followDistance;
+        }
     }
+
     public boolean collidesWith(Entity other) {
         double distance = this.position.distanceTo(other.getPosition());
         return distance < (this.size + other.getSize()) /2;
     }
+    public void setPosition(Vector2D newPosition) {
+        this.position.x = newPosition.x;
+        this.position.y = newPosition.y;
+    }
 
-
-//    public void render(Graphics g) {
-//        if (texture != null) {
-//            g.drawImage(texture, (int) position.x, (int) position.y, (int) size, (int) size, null);
-//        } else {
-//            g.setColor(Color.GREEN);
-//            g.fillOval((int) position.x, (int) position.y, (int) size, (int) size);
-//        }
-//    }
 }

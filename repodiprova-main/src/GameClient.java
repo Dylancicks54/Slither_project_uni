@@ -17,14 +17,14 @@ public class GameClient {
     private List<Entity> entities;
     private JFrame gameFrame;
     private GameWindow gameWindow;
-    private GameController gameController;
+    private GameController gameController; // Dichiarato qui per essere sempre accessibile
 
     public GameClient() {
         showStartMenu();
     }
 
     private void showStartMenu() {
-        JFrame startFrame = new JFrame("Slither.io - Start Menu");
+        JFrame startFrame = new JFrame("VERMONI - Start Menu");
         startFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         startFrame.setSize(400, 300);
 
@@ -67,21 +67,13 @@ public class GameClient {
         player = new Player("SinglePlayer");
         player.setPosition(new Vector2D(400, 300));  // Assicura che il player sia al centro
         gameState.addPlayer(player);
-        gameController = new GameController(player);
+        gameState.addBot();
 
         entities = new ArrayList<>(gameState.getPlayers());
         entities.addAll(gameState.getBots());
         entities.addAll(gameState.getFoodItems());
 
-        if (entities.isEmpty()) {
-            System.err.println("ERRORE: entities è vuoto, nessun oggetto da disegnare!");
-        } else {
-            for (Entity e : entities) {
-                System.out.println("Entità presente: " + e.getClass().getSimpleName() + " Posizione: " + e.getPosition());
-            }
-        }
-
-        createGameWindow();
+        createGameWindow(); // Crea la finestra di gioco
     }
 
     private void startMultiplayer() {
@@ -94,8 +86,9 @@ public class GameClient {
             System.out.println("Connesso al server come " + player.getId());
             out.println("JOIN " + player.getId()); // Invia il messaggio di join al server
             new Thread(this::listenForMessages).start();
-            gameController = new GameController(player);
-            createGameWindow();
+
+            createGameWindow(); // Crea la finestra di gioco
+
         } catch (IOException e) {
             System.err.println("Errore di connessione al server.");
             System.exit(0);
@@ -145,7 +138,14 @@ public class GameClient {
         gameFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         gameFrame.setSize(800, 600);
 
-        gameWindow = new GameWindow(entities, gameController, player);
+        gameWindow = new GameWindow(gameState, gameController,player); // Passa solo gameState e player
+
+
+        gameController = new GameController(player, gameWindow);
+        gameWindow.addKeyListener(gameController);
+        gameWindow.addMouseMotionListener(gameController);
+        gameFrame.addKeyListener(gameController);  // Aggiunto per sicurezza
+
         gameFrame.add(gameWindow);
         gameFrame.pack();
         gameFrame.setVisible(true);

@@ -1,5 +1,6 @@
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public class Player extends Entity {
@@ -12,16 +13,35 @@ public class Player extends Entity {
     private long boostStartTime = 0; // Timestamp dell'inizio del boost
     private long cooldownEndTime = 0;
     private boolean isAlive = true;// Timestamp della fine del cooldown
+    private LinkedList<Vector2D> trail = new LinkedList<>();
 
     public Player(String id) {
         this.id = id;
-        this.position = new Vector2D(Math.random() * 1000, Math.random() * 1000); // Posizione iniziale
-        this.segments.add(new Segment(position, 17)); // Segmento iniziale
+        this.position = new Vector2D(
+                Math.random() * GameState.MAP_WIDTH,
+                Math.random() * GameState.MAP_HEIGHT
+        ); // Genera una posizione casuale nella mappa
+
+        this.segments.add(new Segment(new Vector2D(this.position.x - 15, this.position.y - 15), 17));
     }
+
 
     public String getId() {
         return id;
     }
+    public void respawn() {
+        this.position = new Vector2D(
+                Math.random() * GameState.MAP_WIDTH,
+                Math.random() * GameState.MAP_HEIGHT
+        ); // Nuova posizione casuale nella mappa
+
+        this.segments.clear(); // Rimuove i vecchi segmenti
+        this.segments.add(new Segment(new Vector2D(this.position.x - 15, this.position.y - 15), 17));
+
+        this.speed = 2.5; // Resetta la velocità
+        this.isAlive = true; // Il player torna in vita
+    }
+
 
     public void activateBoost() {
         if (!isBoosting && !isCooldown) {
@@ -64,9 +84,12 @@ public class Player extends Entity {
 
     @Override
     public void update() {
+        if (!isAlive) return; // Se il player è morto, non aggiorna lo stato
+
         updateBoostStatus(); // Aggiorna lo stato del boost
         move();
     }
+
 
     @Override
     public boolean collidesWith(Entity other) {
@@ -81,14 +104,28 @@ public class Player extends Entity {
         position.x += velocity.x;
         position.y += velocity.y;
 
-        for (int i = segments.size() - 1; i > 0; i--) {
-            segments.get(i).follow(segments.get(i - 1).getPosition());
+        // Blocca il player nei confini della mappa
+        position.x = Math.max(0, Math.min(position.x, GameState.MAP_WIDTH));
+        position.y = Math.max(0, Math.min(position.y, GameState.MAP_HEIGHT));
+
+        // Salva la posizione attuale della testa nella trail
+        trail.addFirst(new Vector2D(position.x, position.y));
+
+        // Assicura che la lunghezza della trail non cresca all'infinito
+        if (trail.size() > segments.size() + 5) {
+            trail.removeLast();
         }
-        segments.get(0).follow(position);
+
+        // Ora facciamo seguire i segmenti
+        for (int i = 0; i < segments.size(); i++) {
+            int index = Math.min(i * 5, trail.size() - 1);
+            segments.get(i).setPosition(trail.get(index));
+        }
     }
 
+
     public void grow() {
-        Segment lastSegment = segments.get(segments.size() - 1);
+        Segment lastSegment = segments.getLast();
         segments.add(new Segment(new Vector2D(lastSegment.getPosition().x, lastSegment.getPosition().y), lastSegment.getSize()));
         if (speed > 2) speed -= 0.03;
     }

@@ -69,18 +69,31 @@ public class AIController {
 
         for (Entity entity : nearbyEntities) {
             if (entity instanceof Food) {
-                double distance = bot.getPosition().distanceTo(entity.getPosition());
+                Food food = (Food) entity;
+
+                // Se il cibo è già stato reclamato da un altro bot, lo ignoriamo
+                if (food.getClaimedBy() != null && food.getClaimedBy() != bot) continue;
+
+                double distance = bot.getPosition().distanceTo(food.getPosition());
                 if (distance < minDistance) {
                     minDistance = distance;
-                    closestFood = (Food) entity;
+                    closestFood = food;
                 }
             }
         }
 
         if (closestFood != null) {
+            closestFood.setClaimedBy(bot); // Ora il bot reclama il cibo
             bot.moveTowards(closestFood.getPosition());
+
+            // Controlliamo se il bot ha raggiunto il cibo
+            if (bot.collidesWith(closestFood)) {
+                bot.grow();
+                bot.getGameState().removeFood(closestFood);
+            }
         }
     }
+
 
 
 
