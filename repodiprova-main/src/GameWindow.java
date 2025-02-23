@@ -28,13 +28,16 @@ public class GameWindow extends JPanel {
         int deltaX = (int) player.getPosition().getX() - getWidth() / 2;
         int deltaY = (int) player.getPosition().getY() - getHeight() / 2;
 
-        drawGrid(g2d, deltaX, deltaY);
+        drawBackground(g2d);
+        //drawGrid(g2d, deltaX, deltaY);
         drawEntities(g2d, deltaX, deltaY);
 
         // Disegna i confini della mappa
         g2d.setColor(Color.RED);
         g2d.setStroke(new BasicStroke(9));
         g2d.drawRect(-deltaX, -deltaY, GameState.MAP_WIDTH, GameState.MAP_HEIGHT);
+        zonaRossa(g2d, deltaX, deltaY);
+
 
         // Mostra la schermata di morte
         if (!player.isAlive()) {
@@ -49,31 +52,60 @@ public class GameWindow extends JPanel {
         }
     }
 
+    private void zonaRossa(Graphics2D g2d, int deltaX, int deltaY) {
+        int mapX = -deltaX;
+        int mapY = -deltaY;
+        int mapWidth = GameState.MAP_WIDTH;
+        int mapHeight = GameState.MAP_HEIGHT;
 
-    private void drawGrid(Graphics2D g2d, int deltaX, int deltaY) {
-        g2d.setColor(Color.BLACK);
+        Color coloreZona = new Color(115, 1, 1, 100);
+
+        g2d.setColor(coloreZona);
+
+        g2d.fillRect(0, 0, getWidth(), mapY);
+        g2d.fillRect(0, mapY + mapHeight, getWidth(), getHeight() - (mapY + mapHeight));
+        g2d.fillRect(0, mapY, mapX, mapHeight);
+        g2d.fillRect(mapX + mapWidth, mapY, getWidth() - (mapX + mapWidth), mapHeight);
+    }
+
+    private void drawBackground(Graphics2D g2d) {
+        Color baseColor = new Color(15, 15, 20);
+        Color coloreOttagono = new Color(30, 30, 40);
+
+        g2d.setColor(baseColor);
         g2d.fillRect(0, 0, getWidth(), getHeight());
-        g2d.setColor(Color.GRAY);
 
-        int startX = (deltaX / 50) * 50;
-        int startY = (deltaY / 50) * 50;
+        int size = 50;
+        int spacing = size + 10;
+        int spazioInMezzo = (int) (spacing * Math.sqrt(2));
 
-        for (int x = startX; x < deltaX + getWidth(); x += 50) {
-            int screenX = x - deltaX;
-            g2d.drawLine(screenX, 0, screenX, getHeight());
-        }
+        int deltaX = (int) (-player.getPosition().getX() % spazioInMezzo);
+        int deltaY = (int) (-player.getPosition().getY() % spazioInMezzo);
 
-        for (int y = startY; y < deltaY + getHeight(); y += 50) {
-            int screenY = y - deltaY;
-            g2d.drawLine(0, screenY, getWidth(), screenY);
+        for (int x = deltaX - spazioInMezzo; x < getWidth() + spazioInMezzo; x += spazioInMezzo) {
+            for (int y = deltaY - spazioInMezzo; y < getHeight() + spazioInMezzo; y += spazioInMezzo) {
+                disegnaOttagono(g2d, x, y, size, coloreOttagono);
+            }
         }
     }
+
+    private void disegnaOttagono(Graphics2D g2d, int x, int y, int size, Color color) {
+        int s = size / 3;
+
+        int[] puntiX = { x, x + s, x + size - s, x + size, x + size, x + size - s, x + s, x };
+        int[] puntiY = { y + s, y, y, y + s, y + size - s, y + size, y + size, y + size - s };
+
+        g2d.setColor(color);
+        g2d.fillPolygon(puntiX, puntiY, 8);
+    }
+
+
+
     private Color getRainbowColor() {
         float hue;
         do {
-            hue = (float) Math.random(); // Genera un valore casuale tra 0.0 e 1.0
+            hue = (float) Math.random();
         } while ((hue >= 0.9 || hue <= 0.1) || (hue >= 0.55 && hue <= 0.7));
-        // Evita tonalità di ROSSO (0.9-1.0 e 0.0-0.1) e BLU (0.55-0.7)
 
         return Color.getHSBColor(hue, 1.0f, 1.0f);
     }
@@ -83,7 +115,6 @@ public class GameWindow extends JPanel {
         List<Bot> bots = gameState.getBots();
         List<Food> foodItems = gameState.getFoodItems();
 
-        // Disegna il cibo
         g2d.setColor(getRainbowColor());
         for (Food food : foodItems) {
             int screenX = (int) food.getPosition().getX() - offsetX;
@@ -91,14 +122,12 @@ public class GameWindow extends JPanel {
             g2d.fillOval(screenX - 5, screenY - 5, 10, 10);
         }
 
-        // Disegna i bot e i loro segmenti
         for (Bot bot : bots) {
             g2d.setColor(Color.RED);
             int screenX = (int) bot.getPosition().getX() - offsetX;
             int screenY = (int) bot.getPosition().getY() - offsetY;
             g2d.fillOval(screenX - 5, screenY - 5, 15, 15);
 
-            // Disegna i segmenti del bot
             g2d.setColor(Color.RED);
             for (Segment segment : bot.getBodySegments()) {
                 int segX = (int) segment.getPosition().getX() - offsetX;
@@ -107,14 +136,12 @@ public class GameWindow extends JPanel {
             }
         }
 
-        // Disegna il player e i suoi segmenti
         for (Player p : players) {
             g2d.setColor(Color.BLUE);
             int screenX = (int) p.getPosition().getX() - offsetX;
             int screenY = (int) p.getPosition().getY() - offsetY;
             g2d.fillOval(screenX - 10, screenY - 10, 15, 15);
 
-            // Disegna i segmenti del player
             g2d.setColor(Color.BLUE);
             for (Segment segment : p.getBodySegments()) {
                 int segX = (int) segment.getPosition().getX() - offsetX;
