@@ -65,7 +65,7 @@ public class GameClient {
     private void startSinglePlayer() {
         gameState = new GameState();
         player = new Player("SinglePlayer");
-        player.setPosition(new Vector2D(400, 300));  // Assicura che il player sia al centro
+        player.setPosition(new Vector2D(400,300));  // Assicura che il player sia al centro
         gameState.addPlayer(player);
         gameState.addBot();
 
@@ -74,6 +74,7 @@ public class GameClient {
         entities.addAll(gameState.getFoodItems());
 
         createGameWindow(); // Crea la finestra di gioco
+
     }
 
     private void startMultiplayer() {
@@ -140,11 +141,8 @@ public class GameClient {
 
         gameWindow = new GameWindow(gameState, gameController,player); // Passa solo gameState e player
 
-
+        gameFrame.getContentPane().add(gameWindow);
         gameController = new GameController(player, gameWindow);
-        gameWindow.addKeyListener(gameController);
-        gameWindow.addMouseMotionListener(gameController);
-        gameFrame.addKeyListener(gameController);  // Aggiunto per sicurezza
 
         gameFrame.add(gameWindow);
         gameFrame.pack();

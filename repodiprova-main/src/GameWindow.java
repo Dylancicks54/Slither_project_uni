@@ -1,8 +1,12 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionListener;
 import java.util.List;
 
-public class GameWindow extends JPanel {
+public class GameWindow extends JPanel implements KeyListener, MouseMotionListener {
     private GameState gameState;
     private GameController gameController;
     private Player player;
@@ -12,8 +16,10 @@ public class GameWindow extends JPanel {
         this.gameController = gameController;
         this.player = player;
         setPreferredSize(new Dimension(1920, 1080));
-        setFocusable(true);
-        requestFocusInWindow();
+        this.setFocusable(true);
+        this.requestFocusInWindow();
+        this.addKeyListener(this);
+        this.addMouseMotionListener(this);
         // Avvia il game loop
         Timer timer = new Timer(16, e -> updateGame());
         timer.start();
@@ -185,4 +191,64 @@ public class GameWindow extends JPanel {
         gameState.updateGameState(); // Aggiorna la logica del gioco
         repaint();  // Ridisegna lo schermo
     }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        if (player == null) return;
+
+        int keyCode = e.getKeyCode();
+        switch (keyCode) {
+
+            case KeyEvent.VK_SPACE:
+                player.activateBoost();
+                break;
+            case KeyEvent.VK_R: // Respawn se il player è morto
+                if (!player.isAlive()) {
+                    player.respawn();
+                    System.out.println("Player " + player.getId() + " has respawned!");
+                }
+                break;
+            case KeyEvent.VK_Q: // Esci dal gioco
+                System.out.println("Exiting game...");
+                System.exit(0); // Termina il programma
+                break;
+        }
+    }
+
+
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        if (player == null) return;
+
+        int keyCode = e.getKeyCode();
+        switch (keyCode) {
+            case KeyEvent.VK_SPACE:
+                player.deactivateBoost();
+                break;
+        }
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {
+        // Non utilizzato
+    }
+
+    @Override
+    public void mouseMoved(MouseEvent e) {
+        if (player == null) return;
+
+        // Calcola l'angolo tra il centro del canvas e la posizione del mouse
+        Point mousePosition = e.getPoint();
+        Point canvasCenter = new Point(this.getWidth() / 2, this.getHeight() / 2);
+
+        double angle = Math.atan2(mousePosition.y - canvasCenter.y, mousePosition.x - canvasCenter.x);
+        player.setAngle(Math.toDegrees(angle));  // Imposta l'angolo del giocatore
+    }
+
+    @Override
+    public void mouseDragged(MouseEvent e) {
+        mouseMoved(e);  // Gestisce anche il movimento del mouse durante il drag
+    }
 }
+

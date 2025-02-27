@@ -2,21 +2,17 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.List;
 
-public class GameController implements KeyListener, MouseMotionListener {
+public class GameController  {
     private Player player;
-    private GameWindow gameWindow;
 
     public GameController(Player player, GameWindow gameWindow) {
         this.player = player;
-        this.gameWindow = gameWindow;
-        gameWindow.addKeyListener(this);
-        gameWindow.addMouseMotionListener(this);
         gameWindow.setFocusable(true);
         gameWindow.requestFocus();
         gameWindow.requestFocusInWindow();
     }
-
-    @Override
+}
+    /*@Override
     public void keyPressed(KeyEvent e) {
         if (player == null) return;
 
@@ -94,3 +90,4 @@ public class GameController implements KeyListener, MouseMotionListener {
         mouseMoved(e);  // Gestisce anche il movimento del mouse durante il drag
     }
 }
+*/
