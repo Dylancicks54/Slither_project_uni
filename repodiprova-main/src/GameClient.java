@@ -69,7 +69,6 @@ public class GameClient {
     private void startSinglePlayer() {
         gameState = new GameState();
         player = new Player("SinglePlayer");
-        player.setPosition(new Vector2D(400, 300));
         gameState.addPlayer(player);
         gameState.addBot();
 
