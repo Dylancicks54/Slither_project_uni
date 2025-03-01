@@ -24,13 +24,14 @@ public class Segment {
         double dy = target.y - position.y;
         double distance = Math.sqrt(dx * dx + dy * dy);
 
-        double followDistance = size * 0.8; // Rende il follow più compatto (puoi regolare 0.8)
+        double followDistance = size; // Usa la dimensione del segmento per un follow preciso
 
         if (distance > followDistance) {
             position.x += dx / distance * followDistance;
             position.y += dy / distance * followDistance;
         }
     }
+
 
     public boolean collidesWith(Entity other) {
         double distance = this.position.distanceTo(other.getPosition());

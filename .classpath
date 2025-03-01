@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="src" path="repodiprova-main/src"/>
+	<classpathentry kind="src" path="Slither.io/repodiprova-main/src"/>
+	<classpathentry kind="output" path="Slither.io/out/production/repodiprova-main"/>
+</classpath>

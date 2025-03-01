@@ -54,12 +54,28 @@ public class Bot extends Entity {
         position.y += velocity.y;
 
         if (!segments.isEmpty()) {
+            // Usa un fattore di interpolazione per ridurre la distanza
+            double interpFactor = 0.4; // Valore più alto → i segmenti sono più vicini
+
             for (int i = segments.size() - 1; i > 0; i--) {
-                segments.get(i).follow(segments.get(i - 1).getPosition());
+                Vector2D prevPosition = segments.get(i - 1).getPosition();
+                Vector2D newSegmentPos = new Vector2D(
+                        segments.get(i).getPosition().x + (prevPosition.x - segments.get(i).getPosition().x) * interpFactor,
+                        segments.get(i).getPosition().y + (prevPosition.y - segments.get(i).getPosition().y) * interpFactor
+                );
+                segments.get(i).setPosition(newSegmentPos);
             }
-            segments.getFirst().follow(position);
+
+            // Il primo segmento segue la testa molto più da vicino
+            Vector2D firstSegmentPos = new Vector2D(
+                    segments.getFirst().getPosition().x + (position.x - segments.getFirst().getPosition().x) * interpFactor,
+                    segments.getFirst().getPosition().y + (position.y - segments.getFirst().getPosition().y) * interpFactor
+            );
+            segments.getFirst().setPosition(firstSegmentPos);
         }
     }
+
+
 
 
     public void grow() {

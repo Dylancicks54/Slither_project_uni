@@ -22,7 +22,7 @@ public class Player extends Entity {
                 Math.random() * GameState.MAP_HEIGHT
         ); // Genera una posizione casuale nella mappa
 
-        this.segments.add(new Segment(new Vector2D(this.position.x - 15, this.position.y - 15), 17));
+        this.segments.add(new Segment(new Vector2D(this.position.x , this.position.y), 17));
     }
 
 
@@ -36,7 +36,7 @@ public class Player extends Entity {
         ); // Nuova posizione casuale nella mappa
 
         this.segments.clear(); // Rimuove i vecchi segmenti
-        this.segments.add(new Segment(new Vector2D(this.position.x - 15, this.position.y - 15), 17));
+        this.segments.add(new Segment(new Vector2D(this.position.x , this.position.y ), 17));
 
         this.speed = 2.5; // Resetta la velocità
         this.isAlive = true; // Il player torna in vita
@@ -104,24 +104,32 @@ public class Player extends Entity {
         position.x += velocity.x;
         position.y += velocity.y;
 
-        // Blocca il player nei confini della mappa
         position.x = Math.max(0, Math.min(position.x, GameState.MAP_WIDTH));
         position.y = Math.max(0, Math.min(position.y, GameState.MAP_HEIGHT));
 
-        // Salva la posizione attuale della testa nella trail
         trail.addFirst(new Vector2D(position.x, position.y));
 
-        // Assicura che la lunghezza della trail non cresca all'infinito
-        if (trail.size() > segments.size() + 5) {
+        // Mantiene la lunghezza della trail proporzionata alla quantità di segmenti
+        if (trail.size() > segments.size() * 5) {
             trail.removeLast();
         }
 
-        // Ora facciamo seguire i segmenti
+        // Interpolazione per un movimento più fluido dei segmenti
         for (int i = 0; i < segments.size(); i++) {
             int index = Math.min(i * 5, trail.size() - 1);
-            segments.get(i).setPosition(trail.get(index));
+            Vector2D targetPosition = trail.get(index);
+
+            // Interpoliamo dolcemente il movimento dei segmenti per evitare scatti
+            Segment segment = segments.get(i);
+            double interpFactor = 0.2; // Regola questo valore per rendere il movimento più fluido
+            segment.setPosition(new Vector2D(
+                    segment.getPosition().x + (targetPosition.x - segment.getPosition().x) * interpFactor,
+                    segment.getPosition().y + (targetPosition.y - segment.getPosition().y) * interpFactor
+            ));
         }
     }
+
+
 
 
     public void grow() {

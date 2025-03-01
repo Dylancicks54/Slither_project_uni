@@ -100,7 +100,14 @@ public class AIController {
 
     // Metodo per evitare una collisione
     public void avoidCollision() {
-        Vector2D oppositeDirection = bot.getVelocity().scale(-1);
-        bot.setVelocity(oppositeDirection);
+        Vector2D currentVelocity = bot.getVelocity();
+        double avoidanceAngle = Math.toRadians(45); // Angolo di deviazione
+
+        // Ruota la direzione invece di invertirla completamente
+        double newX = currentVelocity.x * Math.cos(avoidanceAngle) - currentVelocity.y * Math.sin(avoidanceAngle);
+        double newY = currentVelocity.x * Math.sin(avoidanceAngle) + currentVelocity.y * Math.cos(avoidanceAngle);
+
+        bot.setVelocity(new Vector2D(newX, newY).normalize().scale(bot.getSpeed()));
     }
+
 }

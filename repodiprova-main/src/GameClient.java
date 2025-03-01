@@ -5,6 +5,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.*;
 
 public class GameClient {
     private static final String SERVER_IP = "localhost";
@@ -17,7 +18,10 @@ public class GameClient {
     private List<Entity> entities;
     private JFrame gameFrame;
     private GameWindow gameWindow;
-    private GameController gameController; // Dichiarato qui per essere sempre accessibile
+    private GameController gameController;
+    private ExecutorService executorService;
+    private boolean connected = false;
+    private Timer updateTimer;
 
     public GameClient() {
         showStartMenu();
@@ -65,7 +69,7 @@ public class GameClient {
     private void startSinglePlayer() {
         gameState = new GameState();
         player = new Player("SinglePlayer");
-        player.setPosition(new Vector2D(400,300));  // Assicura che il player sia al centro
+        player.setPosition(new Vector2D(400, 300));
         gameState.addPlayer(player);
         gameState.addBot();
 
@@ -73,60 +77,178 @@ public class GameClient {
         entities.addAll(gameState.getBots());
         entities.addAll(gameState.getFoodItems());
 
-        createGameWindow(); // Crea la finestra di gioco
-
+        createGameWindow();
     }
 
     private void startMultiplayer() {
         this.entities = new ArrayList<>();
+        executorService = Executors.newSingleThreadExecutor();
+
         try {
             player = new Player("Player_" + UUID.randomUUID().toString().substring(0, 8));
             socket = new Socket(SERVER_IP, SERVER_PORT);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
             System.out.println("Connesso al server come " + player.getId());
-            out.println("JOIN " + player.getId()); // Invia il messaggio di join al server
-            new Thread(this::listenForMessages).start();
+            out.println("JOIN " + player.getId());
 
-            createGameWindow(); // Crea la finestra di gioco
+            Future<Boolean> joinResponse = executorService.submit(this::waitForServerResponse);
 
-        } catch (IOException e) {
+            if (joinResponse.get()) {
+                System.out.println("Server ha confermato il join.");
+                connected = true;
+
+                gameState = new GameState();
+                gameState.addPlayer(player); // Aggiungi il player locale al gameState
+                receiveInitialGameStateFromServer();
+
+                createGameWindow();
+
+                // Avvia thread per ascoltare messaggi dal server
+                new Thread(this::listenForMessages).start();
+
+                // Inizia a inviare aggiornamenti del player al server
+                startPlayerUpdates();
+            } else {
+                System.err.println("Errore: il server non ha accettato il join.");
+                System.exit(1);
+            }
+
+        } catch (IOException | InterruptedException | ExecutionException e) {
             System.err.println("Errore di connessione al server.");
+            e.printStackTrace();
             System.exit(0);
         }
     }
 
-    private void listenForMessages() {
+    private void receiveInitialGameStateFromServer() {
         try {
             String message;
             while ((message = in.readLine()) != null) {
-                processServerMessage(message);
+                System.out.println("Stato iniziale ricevuto: " + message);
+                String[] parts = message.split(" ");
+
+                if (message.startsWith("NEW_PLAYER")) {
+                    String playerId = parts[1];
+                    double x = Double.parseDouble(parts[2]);
+                    double y = Double.parseDouble(parts[3]);
+
+                    // Non aggiungere il player locale di nuovo
+                    if (!playerId.equals(player.getId())) {
+                        Player newPlayer = new Player(playerId);
+                        newPlayer.setPosition(new Vector2D(x, y));
+                        gameState.addPlayer(newPlayer);
+                        entities.add(newPlayer);
+                    }
+                } else if (message.startsWith("INIT_COMPLETE")) {
+                    break; // Fine dell'inizializzazione
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void processServerMessage(String message) {
-        String[] parts = message.split(" ");
-        if (message.startsWith("NEW_PLAYER")) {
-            String playerId = parts[1];
-            Player newPlayer = new Player(playerId);
-            entities.add(newPlayer);
-        } else if (message.startsWith("UPDATE")) {
-            String playerId = parts[1];
-            double x = Double.parseDouble(parts[2]);
-            double y = Double.parseDouble(parts[3]);
-            updatePlayerPosition(playerId, x, y);
+    private boolean waitForServerResponse() {
+        try {
+            String response = in.readLine();
+            System.out.println("Risposta del server: " + response);
+            return "JOIN_OK".equals(response);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        return false;
+    }
+
+    private void listenForMessages() {
+        try {
+            String message;
+            while (connected && (message = in.readLine()) != null) {
+                processServerMessage(message);
+            }
+        } catch (IOException e) {
+            System.err.println("Errore nella ricezione dei messaggi dal server");
+            e.printStackTrace();
+            connected = false;
+        }
+    }
+
+    private void processServerMessage(String message) {
+        System.out.println("Messaggio ricevuto: " + message);
+        String[] parts = message.split(" ");
+
+        if (message.startsWith("UPDATE")) {
+            for (int i = 1; i < parts.length; i += 3) {
+                String playerId = parts[i];
+                double x = Double.parseDouble(parts[i + 1]);
+                double y = Double.parseDouble(parts[i + 2]);
+
+                // Non aggiorniamo il player locale con le informazioni dal server
+                if (!playerId.equals(player.getId())) {
+                    updatePlayerPosition(playerId, x, y);
+                }
+            }
+        } else if (message.startsWith("REMOVE_PLAYER")) {
+            String playerId = parts[1];
+            removePlayer(playerId);
+        }
+    }
+
+    private void removeFood(double x, double y) {
+        final double THRESHOLD = 5.0;
+        entities.removeIf(entity -> {
+            if (entity instanceof Food) {
+                Vector2D pos = entity.getPosition();
+                double distance = Math.sqrt(Math.pow(pos.getX() - x, 2) + Math.pow(pos.getY() - y, 2));
+                return distance < THRESHOLD;
+            }
+            return false;
+        });
+        gameState.getFoodItems().removeIf(food -> {
+            Vector2D pos = food.getPosition();
+            double distance = Math.sqrt(Math.pow(pos.getX() - x, 2) + Math.pow(pos.getY() - y, 2));
+            return distance < THRESHOLD;
+        });
     }
 
     private void updatePlayerPosition(String playerId, double x, double y) {
         for (Entity entity : entities) {
             if (entity instanceof Player && ((Player) entity).getId().equals(playerId)) {
                 entity.setPosition(new Vector2D(x, y));
-                break;
+                return;
             }
+        }
+
+        // Se il player non esiste, crealo
+        if (!playerId.equals(player.getId())) {
+            Player newPlayer = new Player(playerId);
+            newPlayer.setPosition(new Vector2D(x, y));
+            gameState.addPlayer(newPlayer);
+            entities.add(newPlayer);
+        }
+    }
+
+    private void removePlayer(String playerId) {
+        entities.removeIf(entity -> entity instanceof Player && ((Player) entity).getId().equals(playerId));
+        gameState.getPlayers().removeIf(p -> p.getId().equals(playerId));
+    }
+
+    private void startPlayerUpdates() {
+        updateTimer = new Timer(50, e -> {
+            if (connected && player.isAlive()) {
+                sendPlayerUpdate();
+            }
+        });
+        updateTimer.start();
+    }
+
+    private void sendPlayerUpdate() {
+        if (out != null) {
+            String updateMessage = "MOVE " + player.getId() + " " +
+                    player.getPosition().getX() + " " +
+                    player.getPosition().getY();
+            out.println(updateMessage);
         }
     }
 
@@ -135,13 +257,11 @@ public class GameClient {
             entities = new ArrayList<>();
         }
 
-        gameFrame = new JFrame("Game Client");
+        gameFrame = new JFrame("VERMONI - Game Client");
         gameFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         gameFrame.setSize(800, 600);
 
-        gameWindow = new GameWindow(gameState, gameController,player); // Passa solo gameState e player
-
-        gameFrame.getContentPane().add(gameWindow);
+        gameWindow = new GameWindow(gameState, gameController, player);
         gameController = new GameController(player, gameWindow);
 
         gameFrame.add(gameWindow);
@@ -153,6 +273,6 @@ public class GameClient {
     }
 
     public static void main(String[] args) {
-        new GameClient();
+        SwingUtilities.invokeLater(() -> new GameClient());
     }
 }
