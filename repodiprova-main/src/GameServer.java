@@ -4,7 +4,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class GameServer {
-    private static final int PORT = 12345;
+    private static final int PORT = 1234;
     private static GameState gameState;
     private static final List<ClientHandler> clients = new CopyOnWriteArrayList<>();
     private static final Random random = new Random();
@@ -12,6 +12,8 @@ public class GameServer {
     public static void main(String[] args) {
         gameState = new GameState();
         gameState.addBot();
+        System.out.println("Bot iniziali nel server: " + gameState.getBots().size());
+
 
         // Timer per aggiornare lo stato di gioco
         Timer gameUpdateTimer = new Timer();
@@ -65,6 +67,8 @@ public class GameServer {
         }
 
         private void sendGameStateToClient() {
+            System.out.println("Invio stato di gioco al client...");
+
             // Invia tutti i player
             for (Player p : gameState.getPlayers()) {
                 sendMessage("NEW_PLAYER " + p.getId() + " " +

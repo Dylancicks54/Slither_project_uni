@@ -117,6 +117,7 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
     }
 
     private void drawEntities(Graphics2D g2d, int offsetX, int offsetY) {
+
         List<Player> players = gameState.getPlayers();
         List<Bot> bots = gameState.getBots();
         List<Food> foodItems = gameState.getFoodItems();

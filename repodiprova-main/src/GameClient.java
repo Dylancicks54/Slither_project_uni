@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.concurrent.*;
 
 public class GameClient {
-    private static final String SERVER_IP = "localhost";
-    private static final int SERVER_PORT = 12345;
+    private static final String SERVER_IP = "192.168.0.102";
+    private static final int SERVER_PORT = 1234;
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
@@ -124,6 +124,8 @@ public class GameClient {
     private void receiveInitialGameStateFromServer() {
         try {
             String message;
+            int botCount = 0;
+
             while ((message = in.readLine()) != null) {
                 System.out.println("Stato iniziale ricevuto: " + message);
                 String[] parts = message.split(" ");
@@ -133,21 +135,44 @@ public class GameClient {
                     double x = Double.parseDouble(parts[2]);
                     double y = Double.parseDouble(parts[3]);
 
-                    // Non aggiungere il player locale di nuovo
                     if (!playerId.equals(player.getId())) {
                         Player newPlayer = new Player(playerId);
                         newPlayer.setPosition(new Vector2D(x, y));
                         gameState.addPlayer(newPlayer);
                         entities.add(newPlayer);
                     }
+                } else if (message.startsWith("NEW_BOT")) {
+                    double x = Double.parseDouble(parts[1]);
+                    double y = Double.parseDouble(parts[2]);
+
+                    Bot newBot = new Bot(new Vector2D(x, y), entities, gameState);
+                    gameState.getBots().add(newBot);
+                    entities.add(newBot);
+                    botCount++;
+
                 } else if (message.startsWith("INIT_COMPLETE")) {
-                    break; // Fine dell'inizializzazione
+                    System.out.println("Inizializzazione completata.");
+
+                    // 🔥 Se ci sono meno di X bot, ne aggiungiamo altri manualmente
+                    int minBots = 10; // Numero minimo di bot desiderato
+                    while (botCount < minBots) {
+                        Bot extraBot = Bot.createBot(entities, gameState);
+                        gameState.getBots().add(extraBot);
+                        entities.add(extraBot);
+                        botCount++;
+                    }
+
+                    break;
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
+
+
+
 
     private boolean waitForServerResponse() {
         try {
@@ -209,6 +234,8 @@ public class GameClient {
             gameState.addPlayer(newPlayer);
             entities.add(newPlayer);
         }
+        System.out.println("Aggiornata posizione di " + playerId + " a (" + x + ", " + y + ")");
+
     }
 
     private void removePlayer(String playerId) {

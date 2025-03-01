@@ -86,18 +86,7 @@ public class GameState {
                 }
             }
         }
-        // Collisioni tra bot e segmenti di altri bot
-        for (Bot bot : bots) {
-            for (Bot otherBot : bots) {
-                for (Segment segment : bot.getBodySegments()) {
-                    if (checkCollisionSegmentBot(otherBot, segment)) {
-                        botsToRemove.add(bot);
-                        botsToAdd.add(Bot.createBot(entities, this)); // Genera un nuovo bot
-                        break;
-                    }
-                }
-            }
-        }
+
 
         // Collisioni tra bot e segmenti dei giocatori
         for (Bot bot : bots) {

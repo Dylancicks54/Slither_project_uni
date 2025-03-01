@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eclipse-userlibraries>
+  <library name="UniBSFpLib">
+    <archive path="/Users/nicolamonaco/Downloads/UniBSFpLib" />
+  </library>
+  <library name="java" />
+  <library name="LIBRERIA">
+    <archive path="/Users/nicolamonaco/Downloads/LIBRERIA.jar" />
+  </library>
+  <library name="src" />
+</eclipse-userlibraries>
+
