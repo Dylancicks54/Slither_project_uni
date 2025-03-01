@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.concurrent.*;
 
 public class GameClient {
-    private static final String SERVER_IP = "192.168.0.102";
+    private static final String SERVER_IP = "172.28.228.33";
     private static final int SERVER_PORT = 1234;
     private Socket socket;
     private PrintWriter out;
@@ -226,6 +226,15 @@ public class GameClient {
                 return;
             }
         }
+        for (Player p : gameState.getPlayers()) {
+            if (p.getId().equals(playerId)) {
+                p.setPosition(p.getPosition());  // Aggiorna la posizione del giocatore
+                break;
+            }
+        }
+
+        // Richiama repaint per aggiornare la grafica
+        gameWindow.repaint();
 
         // Se il player non esiste, crealo
         if (!playerId.equals(player.getId())) {
