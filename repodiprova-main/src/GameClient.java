@@ -194,23 +194,6 @@ public class GameClient {
         }
     }
 
-    private void removeFood(double x, double y) {
-        final double THRESHOLD = 5.0;
-        entities.removeIf(entity -> {
-            if (entity instanceof Food) {
-                Vector2D pos = entity.getPosition();
-                double distance = Math.sqrt(Math.pow(pos.getX() - x, 2) + Math.pow(pos.getY() - y, 2));
-                return distance < THRESHOLD;
-            }
-            return false;
-        });
-        gameState.getFoodItems().removeIf(food -> {
-            Vector2D pos = food.getPosition();
-            double distance = Math.sqrt(Math.pow(pos.getX() - x, 2) + Math.pow(pos.getY() - y, 2));
-            return distance < THRESHOLD;
-        });
-    }
-
     private void updatePlayerPosition(String playerId, double x, double y) {
         for (Entity entity : entities) {
             if (entity instanceof Player && ((Player) entity).getId().equals(playerId)) {
