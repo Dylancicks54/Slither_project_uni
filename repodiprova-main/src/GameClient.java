@@ -9,19 +9,20 @@ import java.util.concurrent.*;
 
 public class GameClient {
     private static final String SERVER_IP = "localhost";
-    private static final int SERVER_PORT = 12345;
+    private static final int SERVER_PORT = 1234;
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
     private GameState gameState;
     private Player player;
-    private List<Entity> entities;
+    private List<Entity> entities = new CopyOnWriteArrayList<>();
     private JFrame gameFrame;
     private GameWindow gameWindow;
     private GameController gameController;
     private ExecutorService executorService;
     private boolean connected = false;
     private Timer updateTimer;
+    private final Map<String, Player> playerMap = new ConcurrentHashMap<>();
 
     public GameClient() {
         showStartMenu();
@@ -31,17 +32,14 @@ public class GameClient {
         JFrame startFrame = new JFrame("VERMONI - Start Menu");
         startFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         startFrame.setSize(400, 300);
-
         JPanel panel = new JPanel(new GridLayout(3, 1));
         JLabel titleLabel = new JLabel("Scegli una modalità di gioco", SwingConstants.CENTER);
         JButton singlePlayerButton = new JButton("Single Player");
         JButton multiPlayerButton = new JButton("Multiplayer");
-
         singlePlayerButton.addActionListener(e -> {
             startFrame.dispose();
             startSinglePlayer();
         });
-
         multiPlayerButton.addActionListener(e -> {
             if (isServerAvailable()) {
                 startFrame.dispose();
@@ -50,14 +48,12 @@ public class GameClient {
                 JOptionPane.showMessageDialog(startFrame, "Il server non è disponibile! Avvia il server e riprova.", "Errore", JOptionPane.ERROR_MESSAGE);
             }
         });
-
         panel.add(titleLabel);
         panel.add(singlePlayerButton);
         panel.add(multiPlayerButton);
         startFrame.add(panel);
         startFrame.setVisible(true);
     }
-
     private boolean isServerAvailable() {
         try (Socket testSocket = new Socket(SERVER_IP, SERVER_PORT)) {
             return true;
@@ -65,7 +61,6 @@ public class GameClient {
             return false;
         }
     }
-
     private void startSinglePlayer() {
         gameState = new GameState();
         player = new Player("SinglePlayer");
@@ -78,7 +73,6 @@ public class GameClient {
 
         createGameWindow();
     }
-
     private void startMultiplayer() {
         this.entities = new ArrayList<>();
         executorService = Executors.newSingleThreadExecutor();
@@ -99,11 +93,8 @@ public class GameClient {
                 connected = true;
 
                 gameState = new GameState();
-                gameState.addPlayer(player); // Aggiungi il player locale al gameState
-                receiveInitialGameStateFromServer();
-
+                receiveInitialGameStateFromServer(); // Questo riempirà tutto lo stato
                 createGameWindow();
-
                 // Avvia thread per ascoltare messaggi dal server
                 new Thread(this::listenForMessages).start();
 
@@ -120,35 +111,78 @@ public class GameClient {
             System.exit(0);
         }
     }
-
     private void receiveInitialGameStateFromServer() {
         try {
             String message;
-            while ((message = in.readLine()) != null) {
+            boolean initComplete = false;
+
+            while (!initComplete && (message = in.readLine()) != null) {
                 System.out.println("Stato iniziale ricevuto: " + message);
                 String[] parts = message.split(" ");
 
+                if (parts.length == 0) {
+                    System.err.println("Messaggio vuoto ricevuto dal server.");
+                    continue;
+                }
+
+                if (message.startsWith("INIT_STATE")) {
+                    gameState = new GameState(); // Inizializza lo stato del gioco
+                }
+
                 if (message.startsWith("NEW_PLAYER")) {
+                    if (parts.length < 4) {
+                        System.err.println("Messaggio NEW_PLAYER incompleto: " + message);
+                        continue;
+                    }
                     String playerId = parts[1];
                     double x = Double.parseDouble(parts[2]);
                     double y = Double.parseDouble(parts[3]);
 
-                    // Non aggiungere il player locale di nuovo
-                    if (!playerId.equals(player.getId())) {
-                        Player newPlayer = new Player(playerId);
-                        newPlayer.setPosition(new Vector2D(x, y));
+                    Player newPlayer = new Player(playerId);
+                    newPlayer.setPosition(new Vector2D(x, y));
+
+                    if (playerId.equals(player.getId())) {
+                        player.setPosition(new Vector2D(x, y));
+                        gameState.addPlayer(player);
+                        entities.add(player);
+                    } else {
                         gameState.addPlayer(newPlayer);
                         entities.add(newPlayer);
+                        playerMap.put(playerId, newPlayer);
                     }
+                } else if (message.startsWith("NEW_BOT")) {
+                    if (parts.length < 3) {
+                        System.err.println("Messaggio NEW_BOT incompleto: " + message);
+                        continue;
+                    }
+                    double x = Double.parseDouble(parts[1]);
+                    double y = Double.parseDouble(parts[2]);
+
+                    Bot bot = new Bot(new Vector2D(x, y), entities, gameState);
+                    bot.setPosition(new Vector2D(x, y));
+                    gameState.getBots().add(bot);
+                    entities.add(bot);
+                } else if (message.startsWith("NEW_FOOD")) {
+                    if (parts.length < 3) {
+                        System.err.println("Messaggio NEW_FOOD incompleto: " + message);
+                        continue;
+                    }
+                    double x = Double.parseDouble(parts[1]);
+                    double y = Double.parseDouble(parts[2]);
+
+                    Food food = new Food(new Vector2D(x, y), 10);
+                    gameState.getFoodItems().add(food);
+                    entities.add(food);
                 } else if (message.startsWith("INIT_COMPLETE")) {
-                    break; // Fine dell'inizializzazione
+                    System.out.println("Inizializzazione completata.");
+                    initComplete = true;
+
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
     private boolean waitForServerResponse() {
         try {
             String response = in.readLine();
@@ -177,44 +211,133 @@ public class GameClient {
         System.out.println("Messaggio ricevuto: " + message);
         String[] parts = message.split(" ");
 
-        if (message.startsWith("UPDATE")) {
+        if (message.startsWith("UPDATE_PLAYERS")) {
+            // Aggiorna la posizione dei giocatori
             for (int i = 1; i < parts.length; i += 3) {
                 String playerId = parts[i];
                 double x = Double.parseDouble(parts[i + 1]);
                 double y = Double.parseDouble(parts[i + 2]);
-
-                // Non aggiorniamo il player locale con le informazioni dal server
-                if (!playerId.equals(player.getId())) {
+                if (i + 4 < parts.length && parts[i + 4].equals("DEAD")) {
+                    player.setAlive(false);
+                }
+                    // Assicurati che il giocatore giusto venga aggiornato
+                if (playerId.equals(player.getId())) {
+                    player.setPosition(new Vector2D(x, y));
+                } else {
                     updatePlayerPosition(playerId, x, y);
                 }
+
             }
-        } else if (message.startsWith("REMOVE_PLAYER")) {
+        }
+        else if (message.startsWith("UPDATE_BOTS")) {
+            synchronized (entities) {
+                // Rimuovi tutti i bot esistenti
+                entities.removeIf(entity -> entity instanceof Bot);
+                gameState.getBots().clear();
+
+                // Aggiungi i bot aggiornati
+                for (int i = 1; i < parts.length; i += 2) {
+                    double x = Double.parseDouble(parts[i]);
+                    double y = Double.parseDouble(parts[i + 1]);
+
+                    Bot bot = new Bot(new Vector2D(x,y), entities, gameState);
+                    bot.setPosition(new Vector2D(x, y));
+                    gameState.getBots().add(bot);
+                    entities.add(bot);
+                }
+            }
+        }
+        else if (message.startsWith("UPDATE_FOOD")) {
+            synchronized (entities) {
+                // Rimuovi tutto il cibo esistente
+                entities.removeIf(entity -> entity instanceof Food);
+                gameState.getFoodItems().clear();
+
+                // Aggiungi il cibo aggiornato
+                for (int i = 1; i < parts.length; i += 2) {
+                    double x = Double.parseDouble(parts[i]);
+                    double y = Double.parseDouble(parts[i + 1]);
+
+                    Food food = new Food(new Vector2D(x, y), 10);
+                    gameState.getFoodItems().add(food);
+                    entities.add(food);
+                }
+            }
+        }
+        else if (message.startsWith("REMOVE_PLAYER")) {
             String playerId = parts[1];
             removePlayer(playerId);
         }
-    }
+        else if (message.startsWith("NEW_FOOD")) {
+            double x = Double.parseDouble(parts[1]);
+            double y = Double.parseDouble(parts[2]);
+            Food food = new Food(new Vector2D(x, y), 10);
 
+            synchronized (entities) {
+                gameState.getFoodItems().add(food);
+                entities.add(food);
+            }
+
+        }
+
+
+    }
     private void updatePlayerPosition(String playerId, double x, double y) {
-        for (Entity entity : entities) {
-            if (entity instanceof Player && ((Player) entity).getId().equals(playerId)) {
-                entity.setPosition(new Vector2D(x, y));
-                return;
+        Player existingPlayer = playerMap.get(playerId);
+
+        // Usa una copia della lista o CopyOnWriteArrayList per evitare ConcurrentModificationException
+        synchronized (entities) {
+            boolean found = false;
+
+            // Usa una copia per l'iterazione
+            List<Entity> entitiesCopy = new ArrayList<>(entities);
+
+            for (Entity entity : entitiesCopy) {
+                if (entity instanceof Player && ((Player) entity).getId().equals(playerId)) {
+                    // Aggiorna la posizione del giocatore
+                    entity.setPosition(new Vector2D(x, y));
+                    found = true;
+                    break;
+                }
+            }
+
+            // Se il giocatore non è stato trovato, lo aggiungi
+            if (!found) {
+                if (existingPlayer != null) {
+                    existingPlayer.setPosition(new Vector2D(x, y));
+                } else if (!playerId.equals(player.getId())) {
+                    Player newPlayer = new Player(playerId);
+                    newPlayer.setPosition(new Vector2D(x, y));
+                    playerMap.put(playerId, newPlayer);
+                    gameState.addPlayer(newPlayer);
+                    entities.add(newPlayer);
+                }
             }
         }
 
-        // Se il player non esiste, crealo
-        if (!playerId.equals(player.getId())) {
-            Player newPlayer = new Player(playerId);
-            newPlayer.setPosition(new Vector2D(x, y));
-            gameState.addPlayer(newPlayer);
-            entities.add(newPlayer);
-        }
+        // Dopo aver modificato la lista, aggiorna la UI
+        SwingUtilities.invokeLater(gameWindow::repaint);
     }
 
+
+
+
+
+
+
+
     private void removePlayer(String playerId) {
-        entities.removeIf(entity -> entity instanceof Player && ((Player) entity).getId().equals(playerId));
-        gameState.getPlayers().removeIf(p -> p.getId().equals(playerId));
+        synchronized (entities) {
+            entities.removeIf(entity -> entity instanceof Player && ((Player) entity).getId().equals(playerId));
+        }
+        synchronized (gameState.getPlayers()) {
+            gameState.getPlayers().removeIf(p -> p.getId().equals(playerId));
+        }
+
+        SwingUtilities.invokeLater(gameWindow::repaint); // Aggiorna la UI in modo sicuro
     }
+
+
 
     private void startPlayerUpdates() {
         updateTimer = new Timer(50, e -> {

@@ -2,6 +2,7 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class GameState {
     private List<Entity> entities;
@@ -14,10 +15,10 @@ public class GameState {
 
 
     public GameState() {
-        this.players = new ArrayList<>();
-        this.bots = new ArrayList<>();
-        this.foodItems = new ArrayList<>();
-        this.entities = new ArrayList<>();
+        this.players = new CopyOnWriteArrayList<>();  // Usa CopyOnWriteArrayList
+        this.bots = new CopyOnWriteArrayList<>();     // Usa CopyOnWriteArrayList
+        this.foodItems = new CopyOnWriteArrayList<>(); // Usa CopyOnWriteArrayList
+        this.entities = new CopyOnWriteArrayList<>(); // Usa CopyOnWriteArrayList
     }
 
     public void addPlayer(Player player) {
@@ -49,64 +50,67 @@ public class GameState {
         List<Bot> botsToAdd = new ArrayList<>();
         List<Bot> botsToRemove = new ArrayList<>();
         List<Player> playersToKill = new ArrayList<>();
+        List<Food> foodToRemove = new ArrayList<>(); // Lista per raccogliere il cibo da rimuovere
+
         entities.addAll(players);
         entities.addAll(bots);
         entities.addAll(foodItems);
 
         for (Player player : players) {
-            Iterator<Food> foodIterator = foodItems.iterator();
-            while (foodIterator.hasNext()) {
-                Food food = foodIterator.next();
+            for (Food food : foodItems) {
                 if (player.collidesWith(food)) {
                     player.grow();
-                    foodIterator.remove();
+                    foodToRemove.add(food);
                 }
             }
         }
 
-        // Collisioni tra bot e cibo
         for (Bot bot : bots) {
-            Iterator<Food> foodIterator = foodItems.iterator();
-            while (foodIterator.hasNext()) {
-                Food food = foodIterator.next();
+            for (Food food : foodItems) {
                 if (bot.collidesWith(food)) {
                     bot.grow();
-                    foodIterator.remove();
+                    foodToRemove.add(food);
                 }
             }
         }
 
-        // Collisioni tra bot e altri bot
         for (Bot bot : bots) {
             for (Bot otherBot : bots) {
                 if (bot != otherBot && bot.collidesWith(otherBot)) {
                     botsToRemove.add(bot);
-                    botsToAdd.add(Bot.createBot(entities, this)); // Genera un nuovo bot
+                    botsToAdd.add(Bot.createBot(entities, this));
                     break;
                 }
             }
         }
 
-        // Collisioni tra bot e segmenti dei giocatori
         for (Bot bot : bots) {
             for (Player player : players) {
                 for (Segment segment : player.getBodySegments()) {
                     if (checkCollisionSegmentBot(bot, segment)) {
                         botsToRemove.add(bot);
-                        botsToAdd.add(Bot.createBot(entities, this)); // Genera un nuovo bot
+                        botsToAdd.add(Bot.createBot(entities, this));
                         break;
                     }
                 }
             }
         }
-
-        // Collisioni tra giocatori e segmenti di altri giocatori
         for (Player player : players) {
             for (Player otherPlayer : players) {
-                if (player != otherPlayer) { // Evita il confronto con se stesso
+                if (player != otherPlayer && player.collidesWith(otherPlayer)) {
+                    playersToKill.add(player);
+                    player.setAlive(false);
+                }
+            }
+        }
+
+        for (Player player : players) {
+            for (Player otherPlayer : players) {
+                if (player != otherPlayer) {
                     for (Segment segment : otherPlayer.getBodySegments()) {
                         if (checkCollisionSegmentPlayer(player, segment)) {
                             playersToKill.add(player);
+                            player.setAlive(false);
                             break;
                         }
                     }
@@ -114,7 +118,6 @@ public class GameState {
             }
         }
 
-        // Collisioni tra giocatori e bot
         for (Player player : players) {
             for (Bot bot : bots) {
                 if (player.collidesWith(bot)) {
@@ -124,7 +127,6 @@ public class GameState {
             }
         }
 
-        // Collisioni tra giocatori e segmenti dei bot
         for (Player player : players) {
             for (Bot bot : bots) {
                 for (Segment segment : bot.getBodySegments()) {
@@ -136,15 +138,14 @@ public class GameState {
             }
         }
 
-        // Segna i giocatori come morti
         for (Player player : playersToKill) {
-            player.setAlive(false); // Segna il giocatore come morto
+            player.setAlive(false);
             System.out.println("Player " + player.getId() + " is dead! Press 'R' to respawn.");
         }
 
-        // Rimuove i bot morti e genera nuovi bot
         bots.removeAll(botsToRemove);
         bots.addAll(botsToAdd);
+        foodItems.removeAll(foodToRemove); // Rimozione in blocco per evitare UnsupportedOperationException
     }
 
 
@@ -170,12 +171,20 @@ public class GameState {
     public List<Bot> getBots() { return bots; }
     public List<Food> getFoodItems() { return foodItems; }
 
-    public List<Entity> getEntities() {
-        List<Entity> allEntities = new ArrayList<>();
-        allEntities.addAll(players);
-        allEntities.addAll(bots);
-        allEntities.addAll(foodItems);
-        return allEntities;
-    }
+//    public List<Entity> getEntities() {
+//        List<Entity> allEntities = new ArrayList<>();
+//        allEntities.addAll(players);
+//        allEntities.addAll(bots);
+//        allEntities.addAll(foodItems);
+//        return allEntities;
+//    }
 
+    public Player getPlayerById(String playerId) {
+        for (Player player : players) {
+            if (player.getId().equals(playerId)) {
+                return player;
+            }
+        }
+        return null; // Se non trovato, ritorna null
+    }
 }

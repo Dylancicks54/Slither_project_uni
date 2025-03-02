@@ -94,7 +94,7 @@ public class Player extends Entity {
     @Override
     public boolean collidesWith(Entity other) {
         double distance = this.position.distanceTo(other.position);
-        return distance < (this.size + other.size);
+        return distance < (this.size / 2.0) + (other.size / 2.0);
     }
 
     public void move() {
