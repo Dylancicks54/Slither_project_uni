@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.concurrent.*;
 
 public class GameClient {
-    private static final String SERVER_IP = "localhost";
+    private static final String SERVER_IP = "10.227.219.95";
     private static final int SERVER_PORT = 1234;
     private Socket socket;
     private PrintWriter out;
@@ -129,7 +129,7 @@ public class GameClient {
                     gameState = new GameState(); // Inizializza lo stato del gioco
                 }
 
-                if (message.startsWith("NEW_PLAYER")) {
+                if (message.startsWith("NEW_PLAYER ")) {
                     if (parts.length < 4) {
                         System.err.println("Messaggio NEW_PLAYER incompleto: " + message);
                         continue;
@@ -150,7 +150,7 @@ public class GameClient {
                         entities.add(newPlayer);
                         playerMap.put(playerId, newPlayer);
                     }
-                } else if (message.startsWith("NEW_BOT")) {
+                } else if (message.startsWith("NEW_BOT ")) {
                     if (parts.length < 3) {
                         System.err.println("Messaggio NEW_BOT incompleto: " + message);
                         continue;
@@ -162,7 +162,7 @@ public class GameClient {
                     bot.setPosition(new Vector2D(x, y));
                     gameState.getBots().add(bot);
                     entities.add(bot);
-                } else if (message.startsWith("NEW_FOOD")) {
+                } else if (message.startsWith("NEW_FOOD ")) {
                     if (parts.length < 3) {
                         System.err.println("Messaggio NEW_FOOD incompleto: " + message);
                         continue;
@@ -211,13 +211,13 @@ public class GameClient {
         System.out.println("Messaggio ricevuto: " + message);
         String[] parts = message.split(" ");
 
-        if (message.startsWith("UPDATE_PLAYERS")) {
+        if (message.startsWith(" UPDATE_PLAYERS ")) {
             // Aggiorna la posizione dei giocatori
             for (int i = 1; i < parts.length; i += 3) {
                 String playerId = parts[i];
                 double x = Double.parseDouble(parts[i + 1]);
                 double y = Double.parseDouble(parts[i + 2]);
-                if (i + 4 < parts.length && parts[i + 4].equals("DEAD")) {
+                if (i + 4 < parts.length && parts[i + 4].equals(" DEAD ")) {
                     player.setAlive(false);
                 }
                     // Assicurati che il giocatore giusto venga aggiornato
@@ -229,7 +229,7 @@ public class GameClient {
 
             }
         }
-        else if (message.startsWith("UPDATE_BOTS")) {
+        else if (message.startsWith(" UPDATE_BOTS ")) {
             synchronized (entities) {
                 // Rimuovi tutti i bot esistenti
                 entities.removeIf(entity -> entity instanceof Bot);
@@ -247,7 +247,7 @@ public class GameClient {
                 }
             }
         }
-        else if (message.startsWith("UPDATE_FOOD")) {
+        else if (message.startsWith(" UPDATE_FOOD ")) {
             synchronized (entities) {
                 // Rimuovi tutto il cibo esistente
                 entities.removeIf(entity -> entity instanceof Food);
@@ -264,11 +264,11 @@ public class GameClient {
                 }
             }
         }
-        else if (message.startsWith("REMOVE_PLAYER")) {
+        else if (message.startsWith(" REMOVE_PLAYER ")) {
             String playerId = parts[1];
             removePlayer(playerId);
         }
-        else if (message.startsWith("NEW_FOOD")) {
+        else if (message.startsWith(" NEW_FOOD ")) {
             double x = Double.parseDouble(parts[1]);
             double y = Double.parseDouble(parts[2]);
             Food food = new Food(new Vector2D(x, y), 10);

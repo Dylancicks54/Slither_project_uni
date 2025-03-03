@@ -18,7 +18,8 @@ public class GameServer {
             @Override
             public void run() {
                 gameState.updateGameState();
-                broadcastGameState();
+                broadcastInitialGameState();
+
             }
         }, 0, 50);
 
@@ -38,30 +39,30 @@ public class GameServer {
         }
     }
 
-    private static void broadcastGameState() {
-        StringBuilder gameStateMessage = new StringBuilder("GAME_STATE");
+    private static void broadcastInitialGameState() {
+        StringBuilder gameStateMessage = new StringBuilder("GAME_STATE ");
 
         // Aggiungi tutti i giocatori
         for (Player player : gameState.getPlayers()) {
-            gameStateMessage.append(" NEW_PLAYER ")
+            gameStateMessage.append("NEW_PLAYER ")
                     .append(player.getId()).append(" ")
                     .append(player.getPosition().getX()).append(" ")
                     .append(player.getPosition().getY());
-            if(!player.isAlive()){
-                gameStateMessage.append("DEAD");
-            }
+//            if(!player.isAlive()){
+//                gameStateMessage.append("DEAD");
+//            }
         }
 
         // Aggiungi tutti i bot
         for (Bot bot : gameState.getBots()) {
-            gameStateMessage.append(" NEW_BOT ")
+            gameStateMessage.append("NEW_BOT ")
                     .append(bot.getPosition().getX()).append(" ")
                     .append(bot.getPosition().getY());
         }
 
         // Aggiungi tutto il cibo
         for (Food food : gameState.getFoodItems()) {
-            gameStateMessage.append(" NEW_FOOD ")
+            gameStateMessage.append("NEW_FOOD ")
                     .append(food.getPosition().getX()).append(" ")
                     .append(food.getPosition().getY());
         }
@@ -175,7 +176,7 @@ public class GameServer {
                 // Notifica gli altri client del nuovo giocatore
                 for (ClientHandler client : clients) {
                     if (client != this) {
-                        client.sendMessage("NEW_PLAYER " + player.getId() + " " +
+                        client.sendMessage("NEW_PLAYER" + player.getId() + " " +
                                 player.getPosition().getX() + " " +
                                 player.getPosition().getY());
                     }
@@ -192,7 +193,8 @@ public class GameServer {
                     player.setPosition(new Vector2D(newX, newY));
 
                     // Invia la nuova posizione a tutti i client
-                    broadcastGameState();
+                    broadcastInitialGameState();
+
                 }
             }
 
