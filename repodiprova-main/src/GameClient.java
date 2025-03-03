@@ -211,7 +211,7 @@ public class GameClient {
         System.out.println("Messaggio ricevuto: " + message);
         String[] parts = message.split(" ");
 
-        if (message.startsWith(" UPDATE_PLAYERS ")) {
+        if (message.startsWith("UPDATE_PLAYERS ")) {
             // Aggiorna la posizione dei giocatori
             for (int i = 1; i < parts.length; i += 3) {
                 String playerId = parts[i];
@@ -229,7 +229,7 @@ public class GameClient {
 
             }
         }
-        else if (message.startsWith(" UPDATE_BOTS ")) {
+        else if (message.startsWith("UPDATE_BOTS ")) {
             synchronized (entities) {
                 // Rimuovi tutti i bot esistenti
                 entities.removeIf(entity -> entity instanceof Bot);
@@ -247,7 +247,7 @@ public class GameClient {
                 }
             }
         }
-        else if (message.startsWith(" UPDATE_FOOD ")) {
+        else if (message.startsWith("UPDATE_FOOD ")) {
             synchronized (entities) {
                 // Rimuovi tutto il cibo esistente
                 entities.removeIf(entity -> entity instanceof Food);

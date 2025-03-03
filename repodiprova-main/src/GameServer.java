@@ -48,9 +48,9 @@ public class GameServer {
                     .append(player.getId()).append(" ")
                     .append(player.getPosition().getX()).append(" ")
                     .append(player.getPosition().getY());
-//            if(!player.isAlive()){
-//                gameStateMessage.append("DEAD");
-//            }
+            if(!player.isAlive()){
+                gameStateMessage.append("DEAD ");
+            }
         }
 
         // Aggiungi tutti i bot
@@ -66,12 +66,19 @@ public class GameServer {
                     .append(food.getPosition().getX()).append(" ")
                     .append(food.getPosition().getY());
         }
+        StringBuilder gameStateMessageUpdate = new StringBuilder("UPDATE ");
+        gameStateMessageUpdate.append("UPDATE_PLAYERS ");
+        gameStateMessageUpdate.append("UPDATE_BOTS ");
+        gameStateMessageUpdate.append("UPDATE_FOOD ");
 
         // Invia il messaggio completo a tutti i client
         String fullMessage = gameStateMessage.toString();
         for (ClientHandler client : clients) {
             client.sendMessage(fullMessage);
+            client.sendMessage(gameStateMessageUpdate.toString());
         }
+
+
     }
 
     static class ClientHandler implements Runnable {
