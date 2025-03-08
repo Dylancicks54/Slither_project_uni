@@ -85,7 +85,6 @@ public class Player extends Entity {
     @Override
     public void update() {
         if (!isAlive) return; // Se il player è morto, non aggiorna lo stato
-
         updateBoostStatus(); // Aggiorna lo stato del boost
         move();
     }

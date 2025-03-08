@@ -4,7 +4,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class GameServer {
-    private static final int PORT = 1234;
+    private static final int PORT = 12345;
     private static GameState gameState;
     private static final List<ClientHandler> clients = new CopyOnWriteArrayList<>();
     private static final Random random = new Random();

@@ -26,6 +26,15 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
 
     }
 
+    public void updateGameController(GameController gameController) {
+        if (gameController != null) {
+            gameController.applyGameState(gameState);
+            repaint();
+        } else {
+            System.err.println("Ricevuto GameState nullo");
+        }
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
