@@ -192,17 +192,6 @@ public class GameServer {
 
                 // Conferma il join al nuovo giocatore
                 sendMessage("JOIN_OK");
-
-                // 📌 INVIA LA LISTA DI TUTTI I GIOCATORI ESISTENTI AL NUOVO CLIENT
-                for (Player existingPlayer : gameState.getPlayers()) {
-                    if (!existingPlayer.getId().equals(playerId)) {
-                        sendMessage("NEW_PLAYER " + existingPlayer.getId() + " " +
-                                existingPlayer.getPosition().getX() + " " +
-                                existingPlayer.getPosition().getY());
-                    }
-                }
-
-                // Invia lo stato attuale del gioco
                 sendGameStateToClient();
 
                 // Notifica gli altri client del nuovo giocatore
@@ -213,7 +202,6 @@ public class GameServer {
                                 player.getPosition().getY());
                     }
                 }
-
                 // Dopo l'aggiunta di un nuovo player, invia un aggiornamento globale
                 broadcastGameStateUpdates();
             }
@@ -237,7 +225,6 @@ public class GameServer {
     }
 
     public static void broadcast(String message) {
-        System.out.println("Broadcasting to " + clients.size() + " clients: " + message);
         for (ClientHandler client : clients) {
             client.sendMessage(message);
         }

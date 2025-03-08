@@ -18,4 +18,5 @@ public abstract class Entity {
     public void setPosition(Vector2D vector2D) {
         position = vector2D;
     }
+
 }

@@ -11,9 +11,8 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
     private GameController gameController;
     private Player player;
 
-    public GameWindow(GameState gameState, GameController gameController, Player player) {
+    public GameWindow(GameState gameState, Player player) {
         this.gameState = gameState;
-        this.gameController = gameController;
         this.player = player;
         setPreferredSize(new Dimension(1920, 1080));
         this.setFocusable(true);
@@ -29,11 +28,12 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
     public void updateGameController(GameController gameController) {
         if (gameController != null) {
             gameController.applyGameState(gameState);
-            repaint();
+            repaint(); // Chiamato per ridisegnare la vista
         } else {
             System.err.println("Ricevuto GameState nullo");
         }
     }
+
 
     @Override
     protected void paintComponent(Graphics g) {

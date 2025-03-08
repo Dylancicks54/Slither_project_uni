@@ -18,7 +18,7 @@ public class GameState {
         this.players = new CopyOnWriteArrayList<>();  // Usa CopyOnWriteArrayList
         this.bots = new CopyOnWriteArrayList<>();     // Usa CopyOnWriteArrayList
         this.foodItems = new CopyOnWriteArrayList<>(); // Usa CopyOnWriteArrayList
-        this.entities = new CopyOnWriteArrayList<>(); // Usa CopyOnWriteArrayList
+        this.entities = new CopyOnWriteArrayList<>();
     }
 
     public void addPlayer(Player player) {
@@ -36,14 +36,16 @@ public class GameState {
 
 
     public void updateGameState() {
-        for (Player player : players) {
-            player.update();
-        }
-        for (Bot bot : bots) {
-            bot.update();
+        for(Entity entity : entities) {
+            entity.update();
         }
         checkCollisions();
         respawnFood();
+    }
+    public void aggiornaLista() {
+        entities.addAll(players);
+        entities.addAll(bots);
+        entities.addAll(foodItems);
     }
 
     public void checkCollisions() {
@@ -51,11 +53,7 @@ public class GameState {
         List<Bot> botsToRemove = new ArrayList<>();
         List<Player> playersToKill = new ArrayList<>();
         List<Food> foodToRemove = new ArrayList<>(); // Lista per raccogliere il cibo da rimuovere
-
-        entities.addAll(players);
-        entities.addAll(bots);
-        entities.addAll(foodItems);
-
+        aggiornaLista();
         for (Player player : players) {
             for (Food food : foodItems) {
                 if (player.collidesWith(food)) {

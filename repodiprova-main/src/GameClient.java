@@ -217,16 +217,14 @@ public class GameClient {
         String[] parts = message.split(" ");
 
         if (message.startsWith("UPDATE_PLAYERS ")) {
-            for (int i = 1; i < parts.length; i++) {
-                String playerId = parts[i];
-                if (i + 2 >= parts.length) break;
-
-                double x = Double.parseDouble(parts[i + 1]);
-                double y = Double.parseDouble(parts[i + 2]);
+            for (int i = 1; i < parts.length;) {
+                String playerId = parts[i++];
+                double x = Double.parseDouble(parts[i++]);
+                double y = Double.parseDouble(parts[i++]);
                 boolean isDead = false;
-                if (i + 3 < parts.length && "DEAD".equals(parts[i + 3])) {
+                if (i < parts.length && "DEAD".equals(parts[i])) {
                     isDead = true;
-                    i++; // Avanza l'indice per saltare "DEAD"
+                    i++; // Salta "DEAD"
                 }
                 updatePlayerPosition(playerId, x, y);
 
@@ -238,23 +236,17 @@ public class GameClient {
                     playerMap.put(playerId, playerObj);
                 }
 
-
                 playerObj.setPosition(new Vector2D(x, y));
                 playerObj.setAlive(!isDead);
-                gameWindow.updateGameController(gameController);
-
-                // Assicurati che il player locale venga aggiornato correttamente
                 if (player != null && player.getId().equals(playerId)) {
                     player.setPosition(new Vector2D(x, y));
                     player.setAlive(!isDead);
                 }
 
-                if (isDead) {
-                    i++; // Salta il flag DEAD
-                }
+                SwingUtilities.invokeLater(() -> gameWindow.updateGameController(gameController));
             }
-
         }
+
         else if (message.startsWith("UPDATE_BOTS ")) {
             lock.lock();
             try {
@@ -272,7 +264,9 @@ public class GameClient {
                     newEntities.add(bot);
                 }
                 entities.addAll(newEntities);
-                gameWindow.updateGameController(gameController);
+                SwingUtilities.invokeLater(() -> {
+                    gameWindow.updateGameController(gameController);
+                });
             } finally {
                 lock.unlock();
             }
@@ -294,7 +288,9 @@ public class GameClient {
                     newEntities.add(food);
                 }
                 entities.addAll(newEntities);
-                gameWindow.updateGameController(gameController);
+                SwingUtilities.invokeLater(() -> {
+                    gameWindow.updateGameController(gameController);
+                });
             } finally {
                 lock.unlock();
             }
@@ -304,7 +300,9 @@ public class GameClient {
         else if (message.startsWith("REMOVE_PLAYER ")) {
             String playerId = parts[1];
             removePlayer(playerId);
-            gameWindow.updateGameController(gameController);
+            SwingUtilities.invokeLater(() -> {
+                gameWindow.updateGameController(gameController);
+            });
         }
     }
     private void updatePlayerPosition(String playerId, double x, double y) {
@@ -336,7 +334,9 @@ public class GameClient {
 
             // Applicare lo stato aggiornato tramite GameController
 
-            gameWindow.updateGameController(gameController);
+            SwingUtilities.invokeLater(() -> {
+                gameWindow.updateGameController(gameController);
+            });
         } finally {
             lock.unlock();
         }
@@ -353,8 +353,10 @@ public class GameClient {
             gameState.getPlayers().removeIf(p -> p.getId().equals(playerId));
         }
 
-        gameWindow.updateGameController(gameController);
-//        SwingUtilities.invokeLater(gameWindow::repaint); // Aggiorna la UI in modo sicuro
+        SwingUtilities.invokeLater(() -> {
+            gameWindow.updateGameController(gameController);
+        });
+
     }
 
 
@@ -392,8 +394,7 @@ public class GameClient {
         gameFrame = new JFrame("VERMONI - Game Client");
         gameFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         gameFrame.setSize(800, 600);
-        gameWindow = new GameWindow(gameState, gameController, player);
-        gameController = new GameController(gameState);
+        gameWindow = new GameWindow(gameState, player);
         gameFrame.add(gameWindow);
         gameFrame.pack();
         gameFrame.setVisible(true);
