@@ -46,15 +46,20 @@ public class GameState {
         respawnFood();
     }
 
+    public void aggiornaLista(){
+
+        entities.addAll(players);
+        entities.addAll(bots);
+        entities.addAll(foodItems);
+    }
+
     public void checkCollisions() {
         List<Bot> botsToAdd = new ArrayList<>();
         List<Bot> botsToRemove = new ArrayList<>();
         List<Player> playersToKill = new ArrayList<>();
         List<Food> foodToRemove = new ArrayList<>(); // Lista per raccogliere il cibo da rimuovere
 
-        entities.addAll(players);
-        entities.addAll(bots);
-        entities.addAll(foodItems);
+        aggiornaLista();
 
         for (Player player : players) {
             for (Food food : foodItems) {
@@ -154,6 +159,19 @@ public class GameState {
         double collisionDistance = bot.getSize() / 2.0 + segment.getSize() / 2.0;
         return distance < collisionDistance;
     }
+
+    public void setPlayers(List<Player> players) {
+        this.players = players;
+    }
+
+    public void setFoodItems(List<Food> foodItems) {
+        this.foodItems = foodItems;
+    }
+
+    public void setBots(List<Bot> bots) {
+        this.bots = bots;
+    }
+
     private boolean checkCollisionSegmentPlayer(Player player, Segment segment) {
         double distance = player.getPosition().distanceTo(segment.getPosition());
         double collisionDistance = player.getSize() / 2.0 + segment.getSize() / 2.0;
@@ -171,13 +189,13 @@ public class GameState {
     public List<Bot> getBots() { return bots; }
     public List<Food> getFoodItems() { return foodItems; }
 
-//    public List<Entity> getEntities() {
-//        List<Entity> allEntities = new ArrayList<>();
-//        allEntities.addAll(players);
-//        allEntities.addAll(bots);
-//        allEntities.addAll(foodItems);
-//        return allEntities;
-//    }
+    public List<Entity> getEntities() {
+        List<Entity> allEntities = new ArrayList<>();
+        allEntities.addAll(players);
+        allEntities.addAll(bots);
+        allEntities.addAll(foodItems);
+        return allEntities;
+    }
 
     public Player getPlayerById(String playerId) {
         for (Player player : players) {

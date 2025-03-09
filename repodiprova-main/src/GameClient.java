@@ -69,12 +69,11 @@ public class GameClient {
         gameState.addPlayer(player);
         gameState.addBot();
         gameController = new GameController(gameState);
-//        entities = new ArrayList<>(gameState.getPlayers());
         entities.addAll(gameState.getPlayers());
         entities.addAll(gameState.getBots());
         entities.addAll(gameState.getFoodItems());
-
         createGameWindow();
+
     }
     private void startMultiplayer() {
 //        this.entities = new ArrayList<>();
@@ -85,26 +84,28 @@ public class GameClient {
             socket = new Socket(SERVER_IP, SERVER_PORT);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
             System.out.println("Connesso al server come " + player.getId());
             out.println("JOIN " + player.getId());
-
             Future<Boolean> joinResponse = executorService.submit(this::waitForServerResponse);
+
 
             if (joinResponse.get()) {
                 System.out.println("Server ha confermato il join.");
                 connected = true;
-
                 gameState = new GameState();
-                gameController = new GameController(gameState);
                 receiveInitialGameStateFromServer(); // Questo riempirà tutto lo stato
+
+
+                gameController = new GameController(gameState);
                 gameState.addPlayer(player);
                 playerMap.put(player.getId(), player);
                 createGameWindow();
-                // Avvia thread per ascoltare messaggi dal server
-                new Thread(this::listenForMessages).start();
+                if (gameState == null || gameState.getPlayers().isEmpty()) {
+                    System.err.println("Errore: gameState non inizializzato correttamente!");
+                    return;
+                }
 
-                // Inizia a inviare aggiornamenti del player al server
+                new Thread(this::listenForMessages).start();
                 startPlayerUpdates();
             } else {
                 System.err.println("Errore: il server non ha accettato il join.");
@@ -188,6 +189,7 @@ public class GameClient {
         }
     }
 
+
     private boolean waitForServerResponse() {
         try {
             String response = in.readLine();
@@ -217,6 +219,7 @@ public class GameClient {
         String[] parts = message.split(" ");
 
         if (message.startsWith("UPDATE_PLAYERS ")) {
+            List<Player> updatedPlayers = new ArrayList<>();
             for (int i = 1; i < parts.length; i++) {
                 String playerId = parts[i];
                 if (i + 2 >= parts.length) break;
@@ -238,10 +241,10 @@ public class GameClient {
                     playerMap.put(playerId, playerObj);
                 }
 
-
                 playerObj.setPosition(new Vector2D(x, y));
                 playerObj.setAlive(!isDead);
-                gameWindow.updateGameController(gameController);
+                updatedPlayers.add(playerObj);
+                //gameController.applyGameState(gameState);
 
                 // Assicurati che il player locale venga aggiornato correttamente
                 if (player != null && player.getId().equals(playerId)) {
@@ -253,9 +256,11 @@ public class GameClient {
                     i++; // Salta il flag DEAD
                 }
             }
-
+            gameState.setPlayers(updatedPlayers);
         }
         else if (message.startsWith("UPDATE_BOTS ")) {
+            List<Bot> updatedBots = new ArrayList<>();
+
             lock.lock();
             try {
                 List<Entity> newEntities = new ArrayList<>();
@@ -270,15 +275,20 @@ public class GameClient {
                     bot.setPosition(new Vector2D(x, y));
                     gameState.getBots().add(bot);
                     newEntities.add(bot);
+                    updatedBots.add(bot);
                 }
                 entities.addAll(newEntities);
-                gameWindow.updateGameController(gameController);
+                gameController.applyGameState(gameState);
+
             } finally {
                 lock.unlock();
             }
+            gameState.setBots(updatedBots);
 
         }
         else if (message.startsWith("UPDATE_FOOD ")) {
+            List<Food> updatedFood = new ArrayList<>();
+
             lock.lock();
             try {
                 List<Entity> newEntities = new ArrayList<>();
@@ -292,19 +302,23 @@ public class GameClient {
                     Food food = new Food(new Vector2D(x, y), 10);
                     gameState.getFoodItems().add(food);
                     newEntities.add(food);
+                    updatedFood.add(food);
                 }
                 entities.addAll(newEntities);
-                gameWindow.updateGameController(gameController);
+               gameController.applyGameState(gameState);
+
             } finally {
                 lock.unlock();
             }
+            gameState.setFoodItems(updatedFood);
 
         }
 
         else if (message.startsWith("REMOVE_PLAYER ")) {
             String playerId = parts[1];
             removePlayer(playerId);
-            gameWindow.updateGameController(gameController);
+            gameController.applyGameState(gameState);
+
         }
     }
     private void updatePlayerPosition(String playerId, double x, double y) {
@@ -336,7 +350,8 @@ public class GameClient {
 
             // Applicare lo stato aggiornato tramite GameController
 
-            gameWindow.updateGameController(gameController);
+            gameController.applyGameState(gameState);
+
         } finally {
             lock.unlock();
         }
@@ -353,7 +368,9 @@ public class GameClient {
             gameState.getPlayers().removeIf(p -> p.getId().equals(playerId));
         }
 
-        gameWindow.updateGameController(gameController);
+        gameController.applyGameState(gameState);
+
+
 //        SwingUtilities.invokeLater(gameWindow::repaint); // Aggiorna la UI in modo sicuro
     }
 
@@ -388,18 +405,19 @@ public class GameClient {
 
 
     private void createGameWindow() {
+        System.out.println("🔵 Creazione finestra di gioco...");
 
         gameFrame = new JFrame("VERMONI - Game Client");
         gameFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         gameFrame.setSize(800, 600);
-        gameWindow = new GameWindow(gameState, gameController, player);
-        gameController = new GameController(gameState);
+        gameWindow = new GameWindow(gameController, player);
         gameFrame.add(gameWindow);
         gameFrame.pack();
         gameFrame.setVisible(true);
 
         Timer renderTimer = new Timer(16, e -> gameWindow.repaint());
         renderTimer.start();
+        System.out.println("🔵 Creata finestra di gioco...");
     }
 
     public static void main(String[] args) {

@@ -1,6 +1,8 @@
+import javax.swing.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.Timer;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class GameServer {
@@ -21,6 +23,7 @@ public class GameServer {
                 broadcastGameStateUpdates();
 
             }
+
         }, 0, 50);
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
@@ -39,49 +42,56 @@ public class GameServer {
         }
     }
 
-    private static void broadcastInitialGameState() {
-        for (ClientHandler client : clients) {
-            // Stato iniziale completo
-            client.sendMessage("INIT_STATE");
+//    private static void broadcastInitialGameState() {
+//        for (ClientHandler client : clients) {
+//            // Stato iniziale completo
+//            client.sendMessage("INIT_STATE");
+//
+//            for (Player player : gameState.getPlayers()) {
+//                if(player.isAlive()){
+//                    client.sendMessage("NEW_PLAYER " + player.getId() + " " + player.getPosition().getX() + " " + player.getPosition().getY() + (player.isAlive() ? "" : " DEAD"));
+//                }else{
+//                client.sendMessage("NEW_PLAYER " + player.getId() + " " + player.getPosition().getX() + " " + player.getPosition().getY());  }
+//          }
+//            for (Bot bot : gameState.getBots()) {
+//                client.sendMessage("NEW_BOT " + bot.getPosition().getX() + " " + bot.getPosition().getY());
+//            }
+//
+//            for (Food food : gameState.getFoodItems()) {
+//                client.sendMessage("NEW_FOOD " + food.getPosition().getX() + " " + food.getPosition().getY());
+//            }
+//
+//            client.sendMessage("INIT_COMPLETE");
+//        }
+//    }
 
-            for (Player player : gameState.getPlayers()) {
-                if(player.isAlive()){
-                    client.sendMessage("NEW_PLAYER " + player.getId() + " " + player.getPosition().getX() + " " + player.getPosition().getY() + (player.isAlive() ? "" : " DEAD"));
-                }else{
-                client.sendMessage("NEW_PLAYER " + player.getId() + " " + player.getPosition().getX() + " " + player.getPosition().getY());  }
-          }
-            for (Bot bot : gameState.getBots()) {
-                client.sendMessage("NEW_BOT " + bot.getPosition().getX() + " " + bot.getPosition().getY());
-            }
 
-            for (Food food : gameState.getFoodItems()) {
-                client.sendMessage("NEW_FOOD " + food.getPosition().getX() + " " + food.getPosition().getY());
-            }
 
-            client.sendMessage("INIT_COMPLETE");
-        }
-    }
     private static void broadcastGameStateUpdates() {
+        List<Player> playersCopy = new ArrayList<>(gameState.getPlayers());
+        List<Bot> botsCopy = new ArrayList<>(gameState.getBots());
+        List<Food> foodItemsCopy = new ArrayList<>(gameState.getFoodItems());
+
         StringBuilder playerUpdates = new StringBuilder("UPDATE_PLAYERS");
-        for (Player player : gameState.getPlayers()) {
+        for (Player player : playersCopy) {
             playerUpdates.append(" ")
                     .append(player.getId()).append(" ")
                     .append(player.getPosition().getX()).append(" ")
                     .append(player.getPosition().getY());
             if (!player.isAlive()) {
-                playerUpdates.append(" DEAD"); // Aggiungi uno spazio prima di DEAD
+                playerUpdates.append(" DEAD");
             }
         }
 
         StringBuilder botUpdates = new StringBuilder("UPDATE_BOTS");
-        for (Bot bot : gameState.getBots()) {
+        for (Bot bot : botsCopy) {
             botUpdates.append(" ")
                     .append(bot.getPosition().getX()).append(" ")
                     .append(bot.getPosition().getY());
         }
 
         StringBuilder foodUpdates = new StringBuilder("UPDATE_FOOD");
-        for (Food food : gameState.getFoodItems()) {
+        for (Food food : foodItemsCopy) {
             foodUpdates.append(" ")
                     .append(food.getPosition().getX()).append(" ")
                     .append(food.getPosition().getY());
@@ -136,6 +146,7 @@ public class GameServer {
         public void sendMessage(String message) {
             if (out != null && isAlive) {
                 out.println(message);
+                out.flush();
             }
         }
 

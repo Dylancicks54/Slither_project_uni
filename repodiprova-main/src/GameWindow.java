@@ -7,12 +7,10 @@ import java.awt.event.MouseMotionListener;
 import java.util.List;
 
 public class GameWindow extends JPanel implements KeyListener, MouseMotionListener {
-    private GameState gameState;
     private GameController gameController;
     private Player player;
 
-    public GameWindow(GameState gameState, GameController gameController, Player player) {
-        this.gameState = gameState;
+    public GameWindow(GameController gameController, Player player) {
         this.gameController = gameController;
         this.player = player;
         setPreferredSize(new Dimension(1920, 1080));
@@ -21,19 +19,14 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
         this.addKeyListener(this);
         this.addMouseMotionListener(this);
         // Avvia il game loop
-        Timer timer = new Timer(16, e -> updateGame());
+        Timer timer = new Timer(16, e -> {
+            gameController.updateGameState();
+            repaint();
+        });
         timer.start();
 
     }
 
-    public void updateGameController(GameController gameController) {
-        if (gameController != null) {
-            gameController.applyGameState(gameState);
-            repaint();
-        } else {
-            System.err.println("Ricevuto GameState nullo");
-        }
-    }
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -47,14 +40,11 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
         //drawGrid(g2d, deltaX, deltaY);
         drawEntities(g2d, deltaX, deltaY);
 
-        // Disegna i confini della mappa
         g2d.setColor(Color.RED);
         g2d.setStroke(new BasicStroke(9));
         g2d.drawRect(-deltaX, -deltaY, GameState.MAP_WIDTH, GameState.MAP_HEIGHT);
         zonaRossa(g2d, deltaX, deltaY);
 
-
-        // Mostra la schermata di morte
         schermataMorte(player, g2d);
     }
     private void schermataMorte(Player p, Graphics2D g2d){
@@ -129,9 +119,9 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
 
     private void drawEntities(Graphics2D g2d, int offsetX, int offsetY) {
 
-        List<Player> players = gameState.getPlayers();
-        List<Bot> bots = gameState.getBots();
-        List<Food> foodItems = gameState.getFoodItems();
+        List<Player> players = gameController.getPlayers();
+        List<Bot> bots = gameController.getBots();
+        List<Food> foodItems = gameController.getFoodItems();
 
         g2d.setColor(getRainbowColor());
         for (Food food : foodItems) {
@@ -169,40 +159,6 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
         }
     }
 
-    /*private void drawEntityWithSegments(Graphics2D g2d, Entity entity, Color color, int offsetX, int offsetY) {
-        g2d.setColor(color);
-
-        int headSize = 20;  // Dimensione della testa
-        int segmentSize = (int) (headSize * 0.8);  // I segmenti sono più piccoli dell'80%
-
-        if (entity instanceof Bot) {
-            Bot bot = (Bot) entity;
-            for (Segment segment : bot.getBodySegments()) {
-                drawSegment(g2d, segment, segmentSize, offsetX, offsetY);
-            }
-        } else if (entity instanceof Player) {
-            Player player = (Player) entity;
-            for (Segment segment : player.getBodySegments()) {
-                drawSegment(g2d, segment, segmentSize, offsetX, offsetY);
-            }
-        }
-
-        // Disegna la testa dell'entità
-        int screenX = (int) entity.getPosition().getX() - offsetX;
-        int screenY = (int) entity.getPosition().getY() - offsetY;
-        g2d.fillOval(screenX - headSize / 2, screenY - headSize / 2, headSize, headSize);
-    }*/
-
-    private void drawSegment(Graphics2D g2d, Segment segment, int segmentSize, int offsetX, int offsetY) {
-        int screenX = (int) segment.getPosition().getX() - offsetX;
-        int screenY = (int) segment.getPosition().getY() - offsetY;
-        g2d.fillOval(screenX - segmentSize / 2, screenY - segmentSize / 2, segmentSize, segmentSize);
-    }
-
-    private void updateGame() {
-        gameState.updateGameState(); // Aggiorna la logica del gioco
-        repaint();  // Ridisegna lo schermo
-    }
 
     @Override
     public void keyPressed(KeyEvent e) {
@@ -214,7 +170,7 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
             case KeyEvent.VK_SPACE:
                 player.activateBoost();
                 break;
-            case KeyEvent.VK_R: // Respawn se il player è morto
+            case KeyEvent.VK_R:
                 if (!player.isAlive()) {
                     player.respawn();
                     System.out.println("Player " + player.getId() + " has respawned!");
@@ -222,7 +178,7 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
                 break;
             case KeyEvent.VK_Q: // Esci dal gioco
                 System.out.println("Exiting game...");
-                System.exit(0); // Termina il programma
+                System.exit(0);
                 break;
         }
     }
@@ -250,7 +206,6 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
     public void mouseMoved(MouseEvent e) {
         if (player == null) return;
 
-        // Calcola l'angolo tra il centro del canvas e la posizione del mouse
         Point mousePosition = e.getPoint();
         Point canvasCenter = new Point(this.getWidth() / 2, this.getHeight() / 2);
 
@@ -260,7 +215,7 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
 
     @Override
     public void mouseDragged(MouseEvent e) {
-        mouseMoved(e);  // Gestisce anche il movimento del mouse durante il drag
+        mouseMoved(e);
     }
 }
 
