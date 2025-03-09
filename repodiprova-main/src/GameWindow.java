@@ -26,6 +26,15 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
 
     }
 
+    public void updateGameController(GameController gameController) {
+        if (gameController != null) {
+            gameController.applyGameState(gameState);
+            repaint();
+        } else {
+            System.err.println("Ricevuto GameState nullo");
+        }
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -46,6 +55,9 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
 
 
         // Mostra la schermata di morte
+        schermataMorte(player, g2d);
+    }
+    private void schermataMorte(Player p, Graphics2D g2d){
         if (!player.isAlive()) {
             g2d.setColor(new Color(255, 0, 0, 150)); // Sfondo semi-trasparente
             g2d.fillRect(getWidth() / 2 - 200, getHeight() / 2 - 100, 400, 200); // Rettangolo menu
@@ -57,7 +69,6 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
             g2d.drawString("Press Q to Quit", getWidth() / 2 - 80, getHeight() / 2 + 40);
         }
     }
-
     private void zonaRossa(Graphics2D g2d, int deltaX, int deltaY) {
         int mapX = -deltaX;
         int mapY = -deltaY;

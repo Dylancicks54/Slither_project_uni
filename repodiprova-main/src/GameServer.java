@@ -4,7 +4,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class GameServer {
-    private static final int PORT = 1234;
+    private static final int PORT = 12345;
     private static GameState gameState;
     private static final List<ClientHandler> clients = new CopyOnWriteArrayList<>();
     private static final Random random = new Random();
@@ -12,16 +12,14 @@ public class GameServer {
     public static void main(String[] args) {
         gameState = new GameState();
         gameState.addBot();
-        System.out.println("Bot iniziali nel server: " + gameState.getBots().size());
-
-
         // Timer per aggiornare lo stato di gioco
         Timer gameUpdateTimer = new Timer();
         gameUpdateTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 gameState.updateGameState();
-                broadcastGameState();
+                broadcastGameStateUpdates();
+
             }
         }, 0, 50);
 
@@ -41,19 +39,62 @@ public class GameServer {
         }
     }
 
-    private static void broadcastGameState() {
-        StringBuilder stateMessage = new StringBuilder("UPDATE ");
-
-        for (Player player : gameState.getPlayers()) {
-            stateMessage.append(player.getId()).append(" ")
-                    .append(player.getPosition().getX()).append(" ")
-                    .append(player.getPosition().getY()).append(" ");
-        }
-
+    private static void broadcastInitialGameState() {
         for (ClientHandler client : clients) {
-            client.sendMessage(stateMessage.toString());
+            // Stato iniziale completo
+            client.sendMessage("INIT_STATE");
+
+            for (Player player : gameState.getPlayers()) {
+                if(player.isAlive()){
+                    client.sendMessage("NEW_PLAYER " + player.getId() + " " + player.getPosition().getX() + " " + player.getPosition().getY() + (player.isAlive() ? "" : " DEAD"));
+                }else{
+                client.sendMessage("NEW_PLAYER " + player.getId() + " " + player.getPosition().getX() + " " + player.getPosition().getY());  }
+          }
+            for (Bot bot : gameState.getBots()) {
+                client.sendMessage("NEW_BOT " + bot.getPosition().getX() + " " + bot.getPosition().getY());
+            }
+
+            for (Food food : gameState.getFoodItems()) {
+                client.sendMessage("NEW_FOOD " + food.getPosition().getX() + " " + food.getPosition().getY());
+            }
+
+            client.sendMessage("INIT_COMPLETE");
         }
     }
+    private static void broadcastGameStateUpdates() {
+        StringBuilder playerUpdates = new StringBuilder("UPDATE_PLAYERS");
+        for (Player player : gameState.getPlayers()) {
+            playerUpdates.append(" ")
+                    .append(player.getId()).append(" ")
+                    .append(player.getPosition().getX()).append(" ")
+                    .append(player.getPosition().getY());
+            if (!player.isAlive()) {
+                playerUpdates.append(" DEAD"); // Aggiungi uno spazio prima di DEAD
+            }
+        }
+
+        StringBuilder botUpdates = new StringBuilder("UPDATE_BOTS");
+        for (Bot bot : gameState.getBots()) {
+            botUpdates.append(" ")
+                    .append(bot.getPosition().getX()).append(" ")
+                    .append(bot.getPosition().getY());
+        }
+
+        StringBuilder foodUpdates = new StringBuilder("UPDATE_FOOD");
+        for (Food food : gameState.getFoodItems()) {
+            foodUpdates.append(" ")
+                    .append(food.getPosition().getX()).append(" ")
+                    .append(food.getPosition().getY());
+        }
+
+        StringBuilder gameStateUpdate = new StringBuilder("GAME_STATE_UPDATE ");
+        gameStateUpdate.append(playerUpdates).append(" ")
+                .append(botUpdates).append(" ")
+                .append(foodUpdates);
+
+        broadcast(gameStateUpdate.toString());
+    }
+
 
     static class ClientHandler implements Runnable {
         private final Socket clientSocket;
@@ -149,9 +190,19 @@ public class GameServer {
                 gameState.addPlayer(player);
                 System.out.println("Giocatori nel server dopo JOIN: " + gameState.getPlayers().size());
 
+                // Conferma il join al nuovo giocatore
                 sendMessage("JOIN_OK");
 
-                // Invia l'intero stato di gioco al client
+                // 📌 INVIA LA LISTA DI TUTTI I GIOCATORI ESISTENTI AL NUOVO CLIENT
+                for (Player existingPlayer : gameState.getPlayers()) {
+                    if (!existingPlayer.getId().equals(playerId)) {
+                        sendMessage("NEW_PLAYER " + existingPlayer.getId() + " " +
+                                existingPlayer.getPosition().getX() + " " +
+                                existingPlayer.getPosition().getY());
+                    }
+                }
+
+                // Invia lo stato attuale del gioco
                 sendGameStateToClient();
 
                 // Notifica gli altri client del nuovo giocatore
@@ -162,15 +213,31 @@ public class GameServer {
                                 player.getPosition().getY());
                     }
                 }
-            } else if (message.startsWith("MOVE")) {
-                player.move();
+
+                // Dopo l'aggiunta di un nuovo player, invia un aggiornamento globale
+                broadcastGameStateUpdates();
+            }
+
+            else if (message.startsWith("MOVE ")) {
+                String[] parts = message.split(" ");
+                String playerId = parts[1];
+                double newX = Double.parseDouble(parts[2]);
+                double newY = Double.parseDouble(parts[3]);
+
+                // Trova il giocatore e aggiorna la posizione
+                Player player = gameState.getPlayerById(playerId);
+                    player.setPosition(new Vector2D(newX, newY));
+                    // Invia la nuova posizione a tutti i client
+                    broadcastGameStateUpdates();
             }
         }
+
 
 
     }
 
     public static void broadcast(String message) {
+        System.out.println("Broadcasting to " + clients.size() + " clients: " + message);
         for (ClientHandler client : clients) {
             client.sendMessage(message);
         }

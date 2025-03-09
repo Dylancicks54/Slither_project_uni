@@ -26,28 +26,29 @@ public class AIController {
 
     // Metodo per aggiornare la lista delle entità vicine
     private void updateNearbyEntities() {
-        nearbyEntities.clear(); // Pulisce la lista
+        nearbyEntities.clear();
 
-        // Controlla ogni cibo
-        for (Entity food : bot.getGameState().getFoodItems()) {
+        // Copia la lista degli alimenti per evitare la modifica concorrente
+        List<Entity> foodList = new ArrayList<>(bot.getGameState().getFoodItems());
+        for (Entity food : foodList) {
             double distance = bot.getPosition().distanceTo(food.getPosition());
-            if (distance < 9000) {  // Raggio di rilevamento maggiore
+            if (distance < 2500) {
                 nearbyEntities.add(food);
             }
         }
 
-        // Controlla ogni bot
-        for (Entity otherBot : bot.getGameState().getBots()) {
+        // Copia la lista dei bot per evitare la modifica concorrente
+        List<Entity> botList = new ArrayList<>(bot.getGameState().getBots());
+        for (Entity otherBot : botList) {
             if (bot != otherBot) {
                 double distance = bot.getPosition().distanceTo(otherBot.getPosition());
-                if (distance < 9000) {
+                if (distance < 2500) {
                     nearbyEntities.add(otherBot);
                 }
             }
         }
-
-
     }
+
 
 
 
