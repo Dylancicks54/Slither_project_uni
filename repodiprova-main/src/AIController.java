@@ -95,20 +95,44 @@ public class AIController {
         }
     }
 
-
-
-
-
-    // Metodo per evitare una collisione
     public void avoidCollision() {
         Vector2D currentVelocity = bot.getVelocity();
-        double avoidanceAngle = Math.toRadians(45); // Angolo di deviazione
 
-        // Ruota la direzione invece di invertirla completamente
-        double newX = currentVelocity.x * Math.cos(avoidanceAngle) - currentVelocity.y * Math.sin(avoidanceAngle);
-        double newY = currentVelocity.x * Math.sin(avoidanceAngle) + currentVelocity.y * Math.cos(avoidanceAngle);
+        // Trova l'entità più vicina da evitare
+        Entity closestEntityToAvoid = null;
+        double minDistance = Double.MAX_VALUE;
 
-        bot.setVelocity(new Vector2D(newX, newY).normalize().scale(bot.getSpeed()));
+        for (Entity entity : nearbyEntities) {
+            double distance = bot.getPosition().distanceTo(entity.getPosition());
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestEntityToAvoid = entity;
+            }
+        }
+
+        if (closestEntityToAvoid != null) {
+            // Calcola una direzione per evitare la collisione
+            Vector2D directionToAvoid = bot.getPosition().subtract(closestEntityToAvoid.getPosition());
+            Vector2D newVelocity = currentVelocity.add(directionToAvoid.normalize().scale(bot.getSpeed()));
+
+            // Imposta la nuova velocità (evitando la collisione)
+            bot.setVelocity(newVelocity.normalize().scale(bot.getSpeed()));
+        }
     }
+
+
+
+
+//    // Metodo per evitare una collisione
+//    public void avoidCollision() {
+//        Vector2D currentVelocity = bot.getVelocity();
+//        double avoidanceAngle = Math.toRadians(45); // Angolo di deviazione
+//
+//        // Ruota la direzione invece di invertirla completamente
+//        double newX = currentVelocity.x * Math.cos(avoidanceAngle) - currentVelocity.y * Math.sin(avoidanceAngle);
+//        double newY = currentVelocity.x * Math.sin(avoidanceAngle) + currentVelocity.y * Math.cos(avoidanceAngle);
+//
+//        bot.setVelocity(new Vector2D(newX, newY).normalize().scale(bot.getSpeed()));
+//    }
 
 }

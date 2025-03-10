@@ -100,6 +100,11 @@ public class Bot extends Entity {
         return distance < (this.size + other.size);
     }
 
+    public boolean collidesSegment(Segment segment) {
+        double distance = this.position.distanceTo(segment.getPosition());
+        return distance < (this.size + segment.getSize());
+    }
+
     // Aggiungi un metodo per ottenere il GameState (se non è già presente)
     public GameState getGameState() {
         return gameState; // Assicurati che il GameState sia definito nella classe Bot

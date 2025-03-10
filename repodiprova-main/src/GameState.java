@@ -61,6 +61,7 @@ public class GameState {
 
         aggiornaLista();
 
+        // Gestione delle collisioni tra player e cibo
         for (Player player : players) {
             for (Food food : foodItems) {
                 if (player.collidesWith(food)) {
@@ -70,6 +71,7 @@ public class GameState {
             }
         }
 
+        // Gestione delle collisioni tra bot e cibo
         for (Bot bot : bots) {
             for (Food food : foodItems) {
                 if (bot.collidesWith(food)) {
@@ -79,9 +81,14 @@ public class GameState {
             }
         }
 
+        // Gestione delle collisioni tra bot e altri bot
         for (Bot bot : bots) {
             for (Bot otherBot : bots) {
                 if (bot != otherBot && bot.collidesWith(otherBot)) {
+                    // Trasformiamo ogni segmento del bot morto in cibo
+                    for (Segment segment : bot.getBodySegments()) {
+                        foodItems.add(createFoodFromSegment(segment)); // Crea cibo da ogni segmento
+                    }
                     botsToRemove.add(bot);
                     botsToAdd.add(Bot.createBot(entities, this));
                     break;
@@ -89,10 +96,15 @@ public class GameState {
             }
         }
 
+        // Gestione delle collisioni tra bot e segmenti del corpo dei player
         for (Bot bot : bots) {
             for (Player player : players) {
                 for (Segment segment : player.getBodySegments()) {
                     if (checkCollisionSegmentBot(bot, segment)) {
+                        // Trasformiamo ogni segmento del bot morto in cibo
+                        for (Segment segmentBot : bot.getBodySegments()) {
+                            foodItems.add(createFoodFromSegment(segmentBot)); // Crea cibo da ogni segmento
+                        }
                         botsToRemove.add(bot);
                         botsToAdd.add(Bot.createBot(entities, this));
                         break;
@@ -100,6 +112,8 @@ public class GameState {
                 }
             }
         }
+
+        // Gestione delle collisioni tra player e altri player
         for (Player player : players) {
             for (Player otherPlayer : players) {
                 if (player != otherPlayer && player.collidesWith(otherPlayer)) {
@@ -109,6 +123,7 @@ public class GameState {
             }
         }
 
+        // Gestione delle collisioni tra player e segmenti del corpo dei player
         for (Player player : players) {
             for (Player otherPlayer : players) {
                 if (player != otherPlayer) {
@@ -123,6 +138,7 @@ public class GameState {
             }
         }
 
+        // Gestione delle collisioni tra player e bot
         for (Player player : players) {
             for (Bot bot : bots) {
                 if (player.collidesWith(bot)) {
@@ -131,7 +147,23 @@ public class GameState {
                 }
             }
         }
+        for (Bot bot : bots) {
+            List<Bot> otherBots = new ArrayList<>(bots);
+            for (Bot otherBot : otherBots) {
+                for (Segment segment : otherBot.getBodySegments()) {
+                    if (bot!= otherBot && checkCollisionSegmentBot(bot, segment)) {
+                        for (Segment segmentBot : bot.getBodySegments()) {
+                            foodItems.add(createFoodFromSegment(segmentBot)); // Crea cibo da ogni segmento
+                        }
+                        botsToRemove.add(bot);
+                        botsToAdd.add(Bot.createBot(entities, this));
+                        break;
+                    }
+                }
+            }
+        }
 
+        // Gestione delle collisioni tra player e segmenti del corpo dei bot
         for (Player player : players) {
             for (Bot bot : bots) {
                 for (Segment segment : bot.getBodySegments()) {
@@ -143,14 +175,25 @@ public class GameState {
             }
         }
 
+        // Eliminazione dei player morti
         for (Player player : playersToKill) {
             player.setAlive(false);
             System.out.println("Player " + player.getId() + " is dead! Press 'R' to respawn.");
         }
 
+        // Rimuoviamo i bot morti e aggiungiamo quelli nuovi
         bots.removeAll(botsToRemove);
         bots.addAll(botsToAdd);
-        foodItems.removeAll(foodToRemove); // Rimozione in blocco per evitare UnsupportedOperationException
+
+        // Rimuoviamo il cibo mangiato
+        foodItems.removeAll(foodToRemove);
+    }
+
+    // Metodo per creare cibo da un segmento
+    private Food createFoodFromSegment(Segment segment) {
+        // Crea un oggetto Food basato sulla posizione del segmento
+        Food food = new Food(segment.getPosition(), 10); // Usa la posizione del segmento per il cibo
+        return food;
     }
 
 
