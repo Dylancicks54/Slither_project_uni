@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -8,18 +9,19 @@ import java.util.List;
 
 public class GameWindow extends JPanel implements KeyListener, MouseMotionListener {
     private GameController gameController;
-    private Player player;
+    private GameClient gameClient;
+    private JFrame preLobbyFrame;
 
-    public GameWindow(GameController gameController, Player player) {
+    public GameWindow(GameController gameController, GameClient gameClient) {
         this.gameController = gameController;
-        this.player = player;
+        this.gameClient = gameClient;
         setPreferredSize(new Dimension(1920, 1080));
         this.setFocusable(true);
         this.requestFocusInWindow();
         this.addKeyListener(this);
         this.addMouseMotionListener(this);
         // Avvia il game loop
-        Timer timer = new Timer(16, e -> {
+        Timer timer = new Timer(20, e -> {
             gameController.updateGameState();
             repaint();
         });
@@ -33,8 +35,8 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        int deltaX = (int) player.getPosition().getX() - getWidth() / 2;
-        int deltaY = (int) player.getPosition().getY() - getHeight() / 2;
+        int deltaX = (int) gameClient.getPlayer().getPosition().getX() - getWidth() / 2;
+        int deltaY = (int) gameClient.getPlayer().getPosition().getY() - getHeight() / 2;
 
         drawBackground(g2d);
         //drawGrid(g2d, deltaX, deltaY);
@@ -45,10 +47,10 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
         g2d.drawRect(-deltaX, -deltaY, GameState.MAP_WIDTH, GameState.MAP_HEIGHT);
         zonaRossa(g2d, deltaX, deltaY);
 
-        schermataMorte(player, g2d);
+        schermataMorte(gameClient.getPlayer(), g2d);
     }
     private void schermataMorte(Player p, Graphics2D g2d){
-        if (!player.isAlive()) {
+        if (!gameClient.getPlayer().isAlive()) {
             g2d.setColor(new Color(255, 0, 0, 150)); // Sfondo semi-trasparente
             g2d.fillRect(getWidth() / 2 - 200, getHeight() / 2 - 100, 400, 200); // Rettangolo menu
 
@@ -86,8 +88,8 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
         int spacing = size + 10;
         int spazioInMezzo = (int) (spacing * Math.sqrt(2));
 
-        int deltaX = (int) (-player.getPosition().getX() % spazioInMezzo);
-        int deltaY = (int) (-player.getPosition().getY() % spazioInMezzo);
+        int deltaX = (int) (-gameClient.getPlayer().getPosition().getX() % spazioInMezzo);
+        int deltaY = (int) (-gameClient.getPlayer().getPosition().getY() % spazioInMezzo);
 
         for (int x = deltaX - spazioInMezzo; x < getWidth() + spazioInMezzo; x += spazioInMezzo) {
             for (int y = deltaY - spazioInMezzo; y < getHeight() + spazioInMezzo; y += spazioInMezzo) {
@@ -105,6 +107,94 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
         g2d.setColor(color);
         g2d.fillPolygon(puntiX, puntiY, 8);
     }
+    public void showPreLobby() {
+        preLobbyFrame = new JFrame("SLITHER.IO");
+        preLobbyFrame.setSize(700, 500);
+        preLobbyFrame.setLocationRelativeTo(null);
+        preLobbyFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        // Carica l'immagine di sfondo e ridimensiona
+        ImageIcon background = new ImageIcon("repodiprova-main/src/slitherionew.jpeg");
+        Image backgroundImage = background.getImage().getScaledInstance(preLobbyFrame.getWidth(), preLobbyFrame.getHeight(), Image.SCALE_SMOOTH);
+        background = new ImageIcon(backgroundImage);
+        JLabel backgroundLabel = new JLabel(background);
+        backgroundLabel.setLayout(new BorderLayout()); // Usa BorderLayout per la finestra
+
+        JPanel panel = new JPanel();
+        panel.setOpaque(false); // Rende il pannello trasparente
+        panel.setLayout(new GridBagLayout()); // Layout per il contenuto
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.gridx = 0;
+
+        // Pannello per i bottoni
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setOpaque(false); // Pannello trasparente
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 10)); // Flusso centrato con spazio tra i bottoni
+
+        // Bottone Singleplayer
+        JButton singlePlayerButton = new JButton("Singleplayer");
+        styleButton(singlePlayerButton);
+        buttonPanel.add(singlePlayerButton);
+
+        // Bottone Multiplayer
+        JButton multiPlayerButton = new JButton("Multiplayer");
+        styleButton(multiPlayerButton);
+        buttonPanel.add(multiPlayerButton);
+
+        // Aggiungi il pannello dei bottoni alla parte inferiore della finestra
+        backgroundLabel.add(buttonPanel, BorderLayout.SOUTH); // Aggiunge i bottoni nella parte inferiore della finestra
+
+        // Azioni dei bottoni
+        singlePlayerButton.addActionListener(e -> {
+            gameClient.startSinglePlayer();
+            preLobbyFrame.dispose();
+        });
+
+        multiPlayerButton.addActionListener(e -> {
+
+            if (gameController.isServerAvailable()) {
+                gameClient.startMultiplayer();
+                preLobbyFrame.dispose();
+            } else {
+                JOptionPane.showMessageDialog(preLobbyFrame, "Server non disponibile!", "Errore", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        // Aggiungi il pannello principale con il contenuto
+        backgroundLabel.add(panel, BorderLayout.CENTER);
+
+        preLobbyFrame.setContentPane(backgroundLabel);
+        preLobbyFrame.setVisible(true);
+    }
+
+
+    private void styleButton(JButton button) {
+        button.setFont(new Font("SansSerif", Font.BOLD, 22));  // Ingrandito il font per il testo del bottone
+        button.setPreferredSize(new Dimension(200, 60)); // Impostato una dimensione fissa (larghezza x altezza)
+        button.setBackground(new Color(50, 205, 50)); // Colore verde brillante
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createLineBorder(new Color(34, 139, 34), 2)); // Aggiungiamo un bordo verde scuro
+        button.setOpaque(true);
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(34, 139, 34)); // Colore verde scuro al passaggio del mouse
+            }
+
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(50, 205, 50)); // Torna al colore originale
+            }
+        });
+
+        // Aggiungi un'ombra
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED)
+        ));
+    }
+
 
 
 
@@ -134,13 +224,13 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
             g2d.setColor(Color.RED);
             int screenX = (int) bot.getPosition().getX() - offsetX;
             int screenY = (int) bot.getPosition().getY() - offsetY;
-            g2d.fillOval(screenX - 5, screenY - 5, 15, 15);
+            g2d.fillOval(screenX - 5, screenY - 5, 20, 20);
 
             g2d.setColor(Color.RED);
             for (Segment segment : bot.getBodySegments()) {
                 int segX = (int) segment.getPosition().getX() - offsetX;
                 int segY = (int) segment.getPosition().getY() - offsetY;
-                g2d.fillOval(segX - 5, segY - 5, 10, 10);
+                g2d.fillOval(segX - 5, segY - 5, 16, 16);
             }
         }
 
@@ -148,13 +238,13 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
             g2d.setColor(Color.BLUE);
             int screenX = (int) p.getPosition().getX() - offsetX;
             int screenY = (int) p.getPosition().getY() - offsetY;
-            g2d.fillOval(screenX - 10, screenY - 10, 15, 15);
+            g2d.fillOval(screenX - 10, screenY - 10, 20, 20);
 
             g2d.setColor(Color.BLUE);
             for (Segment segment : p.getBodySegments()) {
                 int segX = (int) segment.getPosition().getX() - offsetX;
                 int segY = (int) segment.getPosition().getY() - offsetY;
-                g2d.fillOval(segX - 5, segY - 5, 10, 10);
+                g2d.fillOval(segX - 5, segY - 5, 16, 16);
             }
         }
     }
@@ -162,18 +252,18 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (player == null) return;
+        if (gameClient.getPlayer() == null) return;
 
         int keyCode = e.getKeyCode();
         switch (keyCode) {
 
             case KeyEvent.VK_SPACE:
-                player.activateBoost();
+                gameClient.getPlayer().activateBoost();
                 break;
             case KeyEvent.VK_R:
-                if (!player.isAlive()) {
-                    player.respawn();
-                    System.out.println("Player " + player.getId() + " has respawned!");
+                if (!gameClient.getPlayer().isAlive()) {
+                    gameClient.getPlayer().respawn();
+                    System.out.println("Player " + gameClient.getPlayer().getId() + " has respawned!");
                 }
                 break;
             case KeyEvent.VK_Q: // Esci dal gioco
@@ -187,12 +277,12 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
 
     @Override
     public void keyReleased(KeyEvent e) {
-        if (player == null) return;
+        if (gameClient.getPlayer() == null) return;
 
         int keyCode = e.getKeyCode();
         switch (keyCode) {
             case KeyEvent.VK_SPACE:
-                player.deactivateBoost();
+                gameClient.getPlayer().deactivateBoost();
                 break;
         }
     }
@@ -204,13 +294,13 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
 
     @Override
     public void mouseMoved(MouseEvent e) {
-        if (player == null) return;
+        if (gameClient.getPlayer() == null) return;
 
         Point mousePosition = e.getPoint();
         Point canvasCenter = new Point(this.getWidth() / 2, this.getHeight() / 2);
 
         double angle = Math.atan2(mousePosition.y - canvasCenter.y, mousePosition.x - canvasCenter.x);
-        player.setAngle(Math.toDegrees(angle));  // Imposta l'angolo del giocatore
+        gameClient.getPlayer().setAngle(Math.toDegrees(angle));  // Imposta l'angolo del giocatore
     }
 
     @Override
@@ -218,4 +308,3 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
         mouseMoved(e);
     }
 }
-

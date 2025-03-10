@@ -8,18 +8,24 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class GameController implements Serializable {
     private static final long serialVersionUID = 1L;
+    private GameClient gameClient;
     private GameState gameState;
     private List<Player> players;
     private List<Bot> bots;
     private List<Food> foodItems;
     private List<Entity> entities;
 
-    public GameController(GameState gameState){
+    public GameController(GameState gameState, GameClient gameClient){
         this.gameState = gameState;
+        this.gameClient = gameClient;
         this.players = gameState.getPlayers();
         this.bots = gameState.getBots();
         this.foodItems = gameState.getFoodItems();
         this.entities = gameState.getEntities();
+    }
+
+    public boolean isServerAvailable() {
+        return gameClient.isServerAvailable(); // Controlla se il server è attivo
     }
 
     public void applyGameState(GameState state) {

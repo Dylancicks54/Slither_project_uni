@@ -27,55 +27,59 @@ public class GameClient {
     private final ReentrantLock lock = new ReentrantLock();
 
     public GameClient() {
-        showStartMenu();
+        this.gameState = new GameState();
+        this.gameController = new GameController(gameState, this);
+        this.gameWindow = new GameWindow(gameController, this);
+        gameWindow.showPreLobby();
     }
 
-    private void showStartMenu() {
-        JFrame startFrame = new JFrame("VERMONI - Start Menu");
-        startFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        startFrame.setSize(400, 300);
-        JPanel panel = new JPanel(new GridLayout(3, 1));
-        JLabel titleLabel = new JLabel("Scegli una modalità di gioco", SwingConstants.CENTER);
-        JButton singlePlayerButton = new JButton("Single Player");
-        JButton multiPlayerButton = new JButton("Multiplayer");
-        singlePlayerButton.addActionListener(e -> {
-            startFrame.dispose();
-            startSinglePlayer();
-        });
-        multiPlayerButton.addActionListener(e -> {
-            if (isServerAvailable()) {
-                startFrame.dispose();
-                startMultiplayer();
-            } else {
-                JOptionPane.showMessageDialog(startFrame, "Il server non è disponibile! Avvia il server e riprova.", "Errore", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-        panel.add(titleLabel);
-        panel.add(singlePlayerButton);
-        panel.add(multiPlayerButton);
-        startFrame.add(panel);
-        startFrame.setVisible(true);
-    }
-    private boolean isServerAvailable() {
+
+//    private void showStartMenu() {
+//        JFrame startFrame = new JFrame("VERMONI - Start Menu");
+//        startFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//        startFrame.setSize(400, 300);
+//        JPanel panel = new JPanel(new GridLayout(3, 1));
+//        JLabel titleLabel = new JLabel("Scegli una modalità di gioco", SwingConstants.CENTER);
+//        JButton singlePlayerButton = new JButton("Single Player");
+//        JButton multiPlayerButton = new JButton("Multiplayer");
+//        singlePlayerButton.addActionListener(e -> {
+//            startFrame.dispose();
+//            startSinglePlayer();
+//        });
+//        multiPlayerButton.addActionListener(e -> {
+//            if (isServerAvailable()) {
+//                startFrame.dispose();
+//                startMultiplayer();
+//            } else {
+//                JOptionPane.showMessageDialog(startFrame, "Il server non è disponibile! Avvia il server e riprova.", "Errore", JOptionPane.ERROR_MESSAGE);
+//            }
+//        });
+//        panel.add(titleLabel);
+//        panel.add(singlePlayerButton);
+//        panel.add(multiPlayerButton);
+//        startFrame.add(panel);
+//        startFrame.setVisible(true);
+//    }
+    public boolean isServerAvailable() {
         try (Socket testSocket = new Socket(SERVER_IP, SERVER_PORT)) {
             return true;
         } catch (IOException e) {
             return false;
         }
     }
-    private void startSinglePlayer() {
-        gameState = new GameState();
+    public void startSinglePlayer() {
+//        gameState = new GameState();
         player = new Player("SinglePlayer");
         gameState.addPlayer(player);
         gameState.addBot();
-        gameController = new GameController(gameState);
+        gameController = new GameController(gameState, this);
         entities.addAll(gameState.getPlayers());
         entities.addAll(gameState.getBots());
         entities.addAll(gameState.getFoodItems());
         createGameWindow();
 
     }
-    private void startMultiplayer() {
+    public void startMultiplayer() {
 //        this.entities = new ArrayList<>();
         executorService = Executors.newSingleThreadExecutor();
 
@@ -92,11 +96,11 @@ public class GameClient {
             if (joinResponse.get()) {
                 System.out.println("Server ha confermato il join.");
                 connected = true;
-                gameState = new GameState();
+//                gameState = new GameState();
                 receiveInitialGameStateFromServer(); // Questo riempirà tutto lo stato
 
 
-                gameController = new GameController(gameState);
+                gameController = new GameController(gameState, this);
                 gameState.addPlayer(player);
                 playerMap.put(player.getId(), player);
                 createGameWindow();
@@ -407,17 +411,23 @@ public class GameClient {
     private void createGameWindow() {
         System.out.println("🔵 Creazione finestra di gioco...");
 
+
         gameFrame = new JFrame("VERMONI - Game Client");
         gameFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         gameFrame.setSize(800, 600);
-        gameWindow = new GameWindow(gameController, player);
+        gameWindow = new GameWindow(gameController, this);
+
         gameFrame.add(gameWindow);
         gameFrame.pack();
         gameFrame.setVisible(true);
 
-        Timer renderTimer = new Timer(16, e -> gameWindow.repaint());
+        Timer renderTimer = new Timer(20, e -> gameWindow.repaint());
         renderTimer.start();
         System.out.println("🔵 Creata finestra di gioco...");
+    }
+
+    public Player getPlayer() {
+        return player;
     }
 
     public static void main(String[] args) {
