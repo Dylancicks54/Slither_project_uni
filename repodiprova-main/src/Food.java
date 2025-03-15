@@ -4,12 +4,14 @@ public class Food extends Entity {
     private int nutritionalValue;
     private Color color;
     private Bot claimedBy;
+    private String identifier;
 
-    public Food(Vector2D position, int nutritionalValue) {
+    public Food(Vector2D position, int nutritionalValue, String identifier) {
         this.position = position;
         this.size = 8;
         this.nutritionalValue = nutritionalValue;
         this.color = Color.GREEN;
+        this.identifier = identifier;
     }
 
     public Bot getClaimedBy() {
@@ -32,6 +34,10 @@ public class Food extends Entity {
 
     public int getNutritionalValue() {
         return nutritionalValue;
+    }
+
+    public String getIdentifier() {
+        return identifier;
     }
 
     @Override

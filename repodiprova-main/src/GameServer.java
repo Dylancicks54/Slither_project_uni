@@ -1,99 +1,89 @@
+import javax.swing.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
+
+import java.util.concurrent.*;
 
 public class GameServer {
-    private static final int PORT = 12345;
-    private static GameState gameState;
+    private static final int PORT = 1234;
+    private static GameStateServer gameStateServer;
     private static final List<ClientHandler> clients = new CopyOnWriteArrayList<>();
     private static final Random random = new Random();
+    private List<Bot> bots = new CopyOnWriteArrayList<>();
+    private List<Food> foods = new CopyOnWriteArrayList<>();
+    private ServerSocket serverSocket;
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    public static void main(String[] args) {
-        gameState = new GameState();
-        gameState.addBot();
-        // Timer per aggiornare lo stato di gioco
-        Timer gameUpdateTimer = new Timer();
-        gameUpdateTimer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                gameState.updateGameState();
-                broadcastGameStateUpdates();
 
-            }
-        }, 0, 50);
+    public GameServer(ServerSocket server) {
+        gameStateServer = new GameStateServer(this);
+        this.serverSocket = server;
+        startGameLoop(); // Avvia il game loop a 60 tick al secondo
+    }
 
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+    private void startGameLoop() {
+        // Pianifica l'aggiornamento del gameState e la broadcast degli aggiornamenti a 60 tick al secondo
+        scheduler.scheduleAtFixedRate(() -> {
+            gameStateServer.update();         // Aggiorna lo stato del gioco
+        }, 0, 20, TimeUnit.MILLISECONDS);      // 17ms ~ 60 FPS
+    }
+
+    public void startServer(){
+        try {
             System.out.println("Server avviato sulla porta " + PORT);
-
-            while (true) {
+            while (!serverSocket.isClosed()) {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("Nuovo client connesso!");
-
                 ClientHandler clientHandler = new ClientHandler(clientSocket);
+                System.out.println("Nuovo client connesso!");
                 clients.add(clientHandler);
                 new Thread(clientHandler).start();
+            }
+        } catch (IOException e) {
+            closeServerSocket();
+        }
+    }
+    public void closeServerSocket() {
+        try {
+            if (serverSocket != null) {
+                serverSocket.close();
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
-    private static void broadcastInitialGameState() {
-        for (ClientHandler client : clients) {
-            // Stato iniziale completo
-            client.sendMessage("INIT_STATE");
-
-            for (Player player : gameState.getPlayers()) {
-                if(player.isAlive()){
-                    client.sendMessage("NEW_PLAYER " + player.getId() + " " + player.getPosition().getX() + " " + player.getPosition().getY() + (player.isAlive() ? "" : " DEAD"));
-                }else{
-                client.sendMessage("NEW_PLAYER " + player.getId() + " " + player.getPosition().getX() + " " + player.getPosition().getY());  }
-          }
-            for (Bot bot : gameState.getBots()) {
-                client.sendMessage("NEW_BOT " + bot.getPosition().getX() + " " + bot.getPosition().getY());
+    public void respond() {
+        System.out.println("SERVER: game started");
+        while (!serverSocket.isClosed()) {
+            try {
+                long start = System.currentTimeMillis();
+                Thread t = new Thread(gameStateServer::update);
+                t.start();
+                t.join();
+                long finish = System.currentTimeMillis() - start;
+                long sleepTime = 17 - finish; // aiming for 60 ticks per second (16.67ms per tick)
+                if (sleepTime > 0) {
+                    Thread.sleep(sleepTime); // Sleep for the remaining time to maintain the target FPS
+                }
+            } catch (InterruptedException ignore) {
             }
-
-            for (Food food : gameState.getFoodItems()) {
-                client.sendMessage("NEW_FOOD " + food.getPosition().getX() + " " + food.getPosition().getY());
-            }
-
-            client.sendMessage("INIT_COMPLETE");
         }
     }
-    private static void broadcastGameStateUpdates() {
-        StringBuilder playerUpdates = new StringBuilder("UPDATE_PLAYERS");
-        for (Player player : gameState.getPlayers()) {
-            playerUpdates.append(" ")
-                    .append(player.getId()).append(" ")
-                    .append(player.getPosition().getX()).append(" ")
-                    .append(player.getPosition().getY());
-            if (!player.isAlive()) {
-                playerUpdates.append(" DEAD"); // Aggiungi uno spazio prima di DEAD
-            }
+
+
+    public static void main(String[] args) {
+        try{
+            ServerSocket serverSocket1 = new ServerSocket(PORT);
+            GameServer server = new GameServer(serverSocket1);
+            new Thread(server::respond);
+            new Thread(server::startServer).start();
+        }catch(Exception e){
+            e.printStackTrace();
         }
 
-        StringBuilder botUpdates = new StringBuilder("UPDATE_BOTS");
-        for (Bot bot : gameState.getBots()) {
-            botUpdates.append(" ")
-                    .append(bot.getPosition().getX()).append(" ")
-                    .append(bot.getPosition().getY());
-        }
-
-        StringBuilder foodUpdates = new StringBuilder("UPDATE_FOOD");
-        for (Food food : gameState.getFoodItems()) {
-            foodUpdates.append(" ")
-                    .append(food.getPosition().getX()).append(" ")
-                    .append(food.getPosition().getY());
-        }
-
-        StringBuilder gameStateUpdate = new StringBuilder("GAME_STATE_UPDATE ");
-        gameStateUpdate.append(playerUpdates).append(" ")
-                .append(botUpdates).append(" ")
-                .append(foodUpdates);
-
-        broadcast(gameStateUpdate.toString());
     }
+
+
 
 
     static class ClientHandler implements Runnable {
@@ -107,35 +97,11 @@ public class GameServer {
             this.clientSocket = clientSocket;
         }
 
-        private void sendGameStateToClient() {
-            System.out.println("Invio stato di gioco al client...");
-
-            // Invia tutti i player
-            for (Player p : gameState.getPlayers()) {
-                sendMessage("NEW_PLAYER " + p.getId() + " " +
-                        p.getPosition().getX() + " " +
-                        p.getPosition().getY());
-            }
-
-            // Invia tutti i bot
-            for (Bot b : gameState.getBots()) {
-                sendMessage("NEW_BOT " + b.getPosition().getX() + " " +
-                        b.getPosition().getY());
-            }
-
-            // Invia tutto il cibo
-            for (Food f : gameState.getFoodItems()) {
-                sendMessage("NEW_FOOD " + f.getPosition().getX() + " " +
-                        f.getPosition().getY());
-            }
-
-            // Segnala fine dell'inizializzazione
-            sendMessage("INIT_COMPLETE");
-        }
 
         public void sendMessage(String message) {
             if (out != null && isAlive) {
                 out.println(message);
+                out.flush();
             }
         }
 
@@ -160,7 +126,7 @@ public class GameServer {
             isAlive = false;
 
             if (player != null) {
-                gameState.getPlayers().remove(player);
+                gameStateServer.getPlayers().remove(player);
                 broadcast("REMOVE_PLAYER " + player.getId());
             }
 
@@ -181,30 +147,32 @@ public class GameServer {
             if (message.startsWith("JOIN")) {
                 String playerId = message.split(" ")[1];
 
+                // Crea un nuovo player
                 player = new Player(playerId);
-                // Posizione iniziale casuale
-                double x = random.nextDouble() * (GameState.MAP_WIDTH - 100) + 50;
-                double y = random.nextDouble() * (GameState.MAP_HEIGHT - 100) + 50;
-                player.setPosition(new Vector2D(x, y));
+                gameStateServer.addPlayer(player);
+                // Invia lo stato aggiornato al nuovo client
+                //sendGameStateToClient();
+                System.out.println("Giocatore aggiunto: " + player.getId());
+                System.out.println("Numero totale di giocatori nel server: " + gameStateServer.getPlayers().size());
 
-                gameState.addPlayer(player);
-                System.out.println("Giocatori nel server dopo JOIN: " + gameState.getPlayers().size());
-
-                // Conferma il join al nuovo giocatore
-                sendMessage("JOIN_OK");
-                sendGameStateToClient();
-
-                // Notifica gli altri client del nuovo giocatore
+                // Invia l'aggiornamento ai client esistenti
                 for (ClientHandler client : clients) {
                     if (client != this) {
                         client.sendMessage("NEW_PLAYER " + player.getId() + " " +
-                                player.getPosition().getX() + " " +
-                                player.getPosition().getY());
+                                player.getPosition().getX() + " " + player.getPosition().getY());
                     }
                 }
-                // Dopo l'aggiunta di un nuovo player, invia un aggiornamento globale
-                broadcastGameStateUpdates();
+
+
+
+                // Conferma il join al nuovo client
+                sendMessage("JOIN_OK");
+
+                // Invia un aggiornamento globale
+                //broadcastGameStateUpdates();
+                gameStateServer.update();
             }
+
 
             else if (message.startsWith("MOVE ")) {
                 String[] parts = message.split(" ");
@@ -213,10 +181,11 @@ public class GameServer {
                 double newY = Double.parseDouble(parts[3]);
 
                 // Trova il giocatore e aggiorna la posizione
-                Player player = gameState.getPlayerById(playerId);
+                Player player = gameStateServer.getPlayerById(playerId);
                     player.setPosition(new Vector2D(newX, newY));
                     // Invia la nuova posizione a tutti i client
-                    broadcastGameStateUpdates();
+                    //broadcastGameStateUpdates();
+                    gameStateServer.update();
             }
         }
 

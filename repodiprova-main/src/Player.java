@@ -106,27 +106,40 @@ public class Player extends Entity {
         position.x = Math.max(0, Math.min(position.x, GameState.MAP_WIDTH));
         position.y = Math.max(0, Math.min(position.y, GameState.MAP_HEIGHT));
 
+        // Aggiunge la nuova posizione all'inizio della trail
         trail.addFirst(new Vector2D(position.x, position.y));
 
-        // Mantiene la lunghezza della trail proporzionata alla quantità di segmenti
+        // Mantiene la lunghezza della trail proporzionata al numero di segmenti
         if (trail.size() > segments.size() * 5) {
             trail.removeLast();
         }
 
+        // Se la trail è vuota non si procede
+        if (trail.isEmpty() || segments.isEmpty()) {
+            return;
+        }
+
         // Interpolazione per un movimento più fluido dei segmenti
         for (int i = 0; i < segments.size(); i++) {
-            int index = Math.min(i * 5, trail.size() - 1);
-            Vector2D targetPosition = trail.get(index);
+            int index = Math.max(0, Math.min(i * 5, trail.size() - 1));
 
-            // Interpoliamo dolcemente il movimento dei segmenti per evitare scatti
-            Segment segment = segments.get(i);
-            double interpFactor = 0.2; // Regola questo valore per rendere il movimento più fluido
-            segment.setPosition(new Vector2D(
-                    segment.getPosition().x + (targetPosition.x - segment.getPosition().x) * interpFactor,
-                    segment.getPosition().y + (targetPosition.y - segment.getPosition().y) * interpFactor
-            ));
+            // Aggiungi un controllo per verificare che l'indice sia valido
+            if (index >= 0 && index < trail.size()) {
+                Vector2D targetPosition = trail.get(index);
+                if (targetPosition != null) {
+                    Segment segment = segments.get(i);
+                    double interpFactor = 0.2; // Fattore per un movimento più fluido
+
+                    double newX = segment.getPosition().x + (targetPosition.x - segment.getPosition().x) * interpFactor;
+                    double newY = segment.getPosition().y + (targetPosition.y - segment.getPosition().y) * interpFactor;
+                    segment.setPosition(new Vector2D(newX, newY));
+                }
+            }
+
         }
     }
+
+
 
 
 
@@ -177,5 +190,13 @@ public class Player extends Entity {
 
     public void setAlive(boolean alive) {
         isAlive = alive;
+    }
+
+    public void addBodySegment(Segment segment) {
+        this.segments.add(segment);
+    }
+
+    public LinkedList<Vector2D> getTrail() {
+        return trail;
     }
 }

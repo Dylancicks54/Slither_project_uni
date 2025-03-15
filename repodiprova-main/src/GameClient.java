@@ -10,11 +10,10 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class GameClient {
     private static final String SERVER_IP = "localhost";
-    private static final int SERVER_PORT = 12345;
+    private static final int SERVER_PORT = 1234;
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
-    private GameState gameState;
     private Player player;
     private final List<Entity> entities = Collections.synchronizedList(new ArrayList<>());
     private JFrame gameFrame;
@@ -24,60 +23,41 @@ public class GameClient {
     private boolean connected = false;
     private Timer updateTimer;
     private final Map<String, Player> playerMap = new ConcurrentHashMap<>();
+    private final Map<String, Bot> botMap = new ConcurrentHashMap<>();
+    private final Map<String, Food> foodMap = new ConcurrentHashMap<>();
     private final ReentrantLock lock = new ReentrantLock();
+    private OnlineGameController onlineGameController;
+    private GameState gameState;
+    private String messageFromServer;
+
 
     public GameClient() {
-        showStartMenu();
+        gameWindow = new GameWindow(this);
+        gameWindow.showPreLobby();
+
+
+    }
+    private void sendUsernameToServer() {
+        out.write(player.getId());
+        out.flush();
     }
 
-    private void showStartMenu() {
-        JFrame startFrame = new JFrame("VERMONI - Start Menu");
-        startFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        startFrame.setSize(400, 300);
-        JPanel panel = new JPanel(new GridLayout(3, 1));
-        JLabel titleLabel = new JLabel("Scegli una modalità di gioco", SwingConstants.CENTER);
-        JButton singlePlayerButton = new JButton("Single Player");
-        JButton multiPlayerButton = new JButton("Multiplayer");
-        singlePlayerButton.addActionListener(e -> {
-            startFrame.dispose();
-            startSinglePlayer();
-        });
-        multiPlayerButton.addActionListener(e -> {
-            if (isServerAvailable()) {
-                startFrame.dispose();
-                startMultiplayer();
-            } else {
-                JOptionPane.showMessageDialog(startFrame, "Il server non è disponibile! Avvia il server e riprova.", "Errore", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-        panel.add(titleLabel);
-        panel.add(singlePlayerButton);
-        panel.add(multiPlayerButton);
-        startFrame.add(panel);
-        startFrame.setVisible(true);
-    }
-    private boolean isServerAvailable() {
+
+
+
+    public boolean isServerAvailable() {
         try (Socket testSocket = new Socket(SERVER_IP, SERVER_PORT)) {
             return true;
         } catch (IOException e) {
             return false;
         }
     }
-    private void startSinglePlayer() {
-        gameState = new GameState();
-        player = new Player("SinglePlayer");
-        gameState.addPlayer(player);
-        gameState.addBot();
-        gameController = new GameController(gameState);
-//        entities = new ArrayList<>(gameState.getPlayers());
-        entities.addAll(gameState.getPlayers());
-        entities.addAll(gameState.getBots());
-        entities.addAll(gameState.getFoodItems());
+    public void startSinglePlayer() {
+        player = new Player("solo");
+        createGameWindowSingleplayer();
 
-        createGameWindow();
     }
-    private void startMultiplayer() {
-//        this.entities = new ArrayList<>();
+    public void startMultiplayer() {
         executorService = Executors.newSingleThreadExecutor();
 
         try {
@@ -85,26 +65,20 @@ public class GameClient {
             socket = new Socket(SERVER_IP, SERVER_PORT);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
             System.out.println("Connesso al server come " + player.getId());
             out.println("JOIN " + player.getId());
-
             Future<Boolean> joinResponse = executorService.submit(this::waitForServerResponse);
+            onlineGameController = new OnlineGameController(this);
+            sendUsernameToServer();
+
 
             if (joinResponse.get()) {
                 System.out.println("Server ha confermato il join.");
                 connected = true;
-
-                gameState = new GameState();
-                gameController = new GameController(gameState);
-                receiveInitialGameStateFromServer(); // Questo riempirà tutto lo stato
-                gameState.addPlayer(player);
                 playerMap.put(player.getId(), player);
-                createGameWindow();
-                // Avvia thread per ascoltare messaggi dal server
-                new Thread(this::listenForMessages).start();
-
-                // Inizia a inviare aggiornamenti del player al server
+                createOnlineGameWindow();
+                gameController = gameWindow.getGameController();
+                startListening(); // Avvia l'ascolto dei messaggi dal server
                 startPlayerUpdates();
             } else {
                 System.err.println("Errore: il server non ha accettato il join.");
@@ -117,245 +91,162 @@ public class GameClient {
             System.exit(0);
         }
     }
-    private void receiveInitialGameStateFromServer() {
+
+    public void write(String message) {
+        if (socket.isConnected()) {
+            out.write(player.getId() + "-" + message);
+            out.flush();
+        } else {
+            System.out.println("server disconnected");
+        }
+    }
+    public String readMessage() {
         try {
-            String message;
-            boolean initComplete = false;
-
-            while (!initComplete && (message = in.readLine()) != null) {
-                System.out.println("Stato iniziale ricevuto: " + message);
-                String[] parts = message.trim().split("\\s+");
-
-                if (message.startsWith("NEW_PLAYER ")) {
-                    if (parts.length < 4) continue;
-                    String playerId = parts[1];
-                    double x = Double.parseDouble(parts[2]);
-                    double y = Double.parseDouble(parts[3]);
-
-                    // Se è il nostro stesso player, aggiorniamo la posizione
-                    if (player.getId().equals(playerId)) {
-                        player.setPosition(new Vector2D(x, y));
-                    }
-                    // Se è un altro player, aggiungiamolo
-                    else if (!playerMap.containsKey(playerId)) {
-                        Player newPlayer = new Player(playerId);
-                        newPlayer.setPosition(new Vector2D(x, y));
-                        gameState.addPlayer(newPlayer);
-                        entities.add(newPlayer);
-                        playerMap.put(playerId, newPlayer);
-                    }
-
-                }
-                else if (message.startsWith("NEW_BOT ")) {
-                    if (parts.length < 3) continue;
-                    double x = Double.parseDouble(parts[1]);
-                    double y = Double.parseDouble(parts[2]);
-
-                    // Evita di aggiungere duplicati controllando se la posizione è già registrata
-                    boolean exists = gameState.getBots().stream()
-                            .anyMatch(bot -> bot.getPosition().getX() == x && bot.getPosition().getY() == y);
-
-                    if (!exists) {
-                        Bot bot = new Bot(new Vector2D(x, y), entities, gameState);
-                        gameState.getBots().add(bot);
-                        entities.add(bot);
-                    }
-
-                }
-                else if (message.startsWith("NEW_FOOD ")) {
-                    if (parts.length < 3) continue;
-                    double x = Double.parseDouble(parts[1]);
-                    double y = Double.parseDouble(parts[2]);
-
-                    // Evita duplicati nel cibo
-                    boolean exists = gameState.getFoodItems().stream()
-                            .anyMatch(food -> food.getPosition().getX() == x && food.getPosition().getY() == y);
-
-                    if (!exists) {
-                        Food food = new Food(new Vector2D(x, y), 10);
-                        gameState.getFoodItems().add(food);
-                        entities.add(food);
-                    }
-
-                }
-                else if (message.startsWith("INIT_COMPLETE")) {
-                    System.out.println("Inizializzazione completata.");
-                    initComplete = true;
-                }
+            if (in != null) {  // Assicurati che ci sia un messaggio pronto
+                return in.readLine();  // Legge una riga dal buffer di input
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return null;  // Nessun messaggio ricevuto
     }
+
 
     private boolean waitForServerResponse() {
         try {
             String response = in.readLine();
             System.out.println("Risposta del server: " + response);
-            return "JOIN_OK".equals(response);
+//            return "JOIN_OK".equals(response);
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
         }
         return false;
     }
 
-    private void listenForMessages() {
+    private void startListening() {
+        new Thread(() -> listenForMessages()).start();
+    }
+
+
+    private void listenForMessages(){
+        while(socket.isConnected()) {
+            messageFromServer = readMessage();
+            System.out.println(messageFromServer);
+        }
+    }
+//    private void listenForMessages() {
+//        while (socket.isConnected()) {
+//            try {
+//                messageFromServer = in.readLine();
+//                if (messageFromServer == null) break;
+//
+//                // Se il messaggio contiene comandi SERVER, li gestiamo separatamente
+//                if (messageFromServer.contains("SERVER")) {
+//                    System.out.println(messageFromServer);
+//                    if (messageFromServer.contains("SERVER: you died!"))
+//                        closeEverything();
+//                    continue;
+//                }
+//
+//                // Il messaggio è composto da segmenti separati da ';'
+//                // Esempio: "PLAYER Player_aef60d8e 3404.47 4283.80;BOT 748.30 895.23;BOT 555.19 705.08;BOT 187.81 1032.00"
+//                String[] segments = messageFromServer.split(";");
+//                for (String segment : segments) {
+//                    segment = segment.trim();
+//                    if (segment.startsWith("PLAYER ")) {
+//                        // Formato: "PLAYER <playerId> <x> <y>"
+//                        String[] parts = segment.split(" ");
+//                        if (parts.length >= 4) {
+//                            String playerId = parts[1];
+//                            double x = Double.parseDouble(parts[2]);
+//                            double y = Double.parseDouble(parts[3]);
+//                            // Aggiorna (o aggiungi) il giocatore nel GameState
+//                            updatePlayerPosition(playerId, x, y);
+//                        }
+//                    } else if (segment.startsWith("BOT ")) {
+//                        // Formato: "BOT <x> <y>"
+//                        String[] parts = segment.split(" ");
+//                        if (parts.length >= 4) {
+//                            String botId = parts[1];
+//                            double x = Double.parseDouble(parts[2]);
+//                            double y = Double.parseDouble(parts[3]);
+//                            // Aggiorna (o aggiungi) il bot nel GameState
+//                            updateBotPosition(botId,x, y);
+//                        }
+//                    } else if (segment.startsWith("FOOD ")) {
+//                        String[] parts = segment.split(" ");
+//                        if (parts.length >= 4) {
+//                            String foodId = parts[1];
+//                            double x = Double.parseDouble(parts[2]);
+//                            double y = Double.parseDouble(parts[3]);
+//                            // Aggiorna (o aggiungi) il bot nel GameState
+//                            updateFoodPosition(foodId,x, y);
+//                        }
+//                    }
+//                    // Puoi aggiungere altri casi, ad es. per FOOD, se necessario.
+//                }
+//            } catch (IOException e) {
+//                closeEverything();
+//                break;
+//            }
+//        }
+//    }
+
+
+
+    private void closeEverything() {
         try {
-            String message;
-            while (connected && (message = in.readLine()) != null) {
-                processServerMessageUpdate(message);
-            }
+            if (socket != null) socket.close();
+            if (in != null) in.close();
+            if (out != null) out.close();
         } catch (IOException e) {
-            System.err.println("Errore nella ricezione dei messaggi dal server");
             e.printStackTrace();
-            connected = false;
         }
     }
 
-    private void processServerMessageUpdate(String message) {
-        System.out.println("Messaggio ricevuto: " + message);
-        String[] parts = message.split(" ");
-
-        if (message.startsWith("UPDATE_PLAYERS ")) {
-            for (int i = 1; i < parts.length;) {
-                String playerId = parts[i++];
-                double x = Double.parseDouble(parts[i++]);
-                double y = Double.parseDouble(parts[i++]);
-                boolean isDead = false;
-                if (i < parts.length && "DEAD".equals(parts[i])) {
-                    isDead = true;
-                    i++; // Salta "DEAD"
-                }
-                updatePlayerPosition(playerId, x, y);
-
-                Player playerObj = playerMap.get(playerId);
-                if (playerObj == null) {
-                    playerObj = new Player(playerId);
-                    gameState.addPlayer(playerObj);
-                    entities.add(playerObj);
-                    playerMap.put(playerId, playerObj);
-                }
-
-                playerObj.setPosition(new Vector2D(x, y));
-                playerObj.setAlive(!isDead);
-                if (player != null && player.getId().equals(playerId)) {
-                    player.setPosition(new Vector2D(x, y));
-                    player.setAlive(!isDead);
-                }
-
-                SwingUtilities.invokeLater(() -> gameWindow.updateGameController(gameController));
-            }
-        }
-
-        else if (message.startsWith("UPDATE_BOTS ")) {
-            lock.lock();
-            try {
-                List<Entity> newEntities = new ArrayList<>();
-                entities.removeIf(entity -> entity instanceof Bot);  // Rimuovi solo bot
-
-                gameState.getBots().clear();
-                for (int i = 1; i + 1 < parts.length; i += 2) {  // Controlla che ci siano abbastanza valori
-                    double x = Double.parseDouble(parts[i]);
-                    double y = Double.parseDouble(parts[i + 1]);
-
-                    Bot bot = new Bot(new Vector2D(x, y), entities, gameState);
-                    bot.setPosition(new Vector2D(x, y));
-                    gameState.getBots().add(bot);
-                    newEntities.add(bot);
-                }
-                entities.addAll(newEntities);
-                SwingUtilities.invokeLater(() -> {
-                    gameWindow.updateGameController(gameController);
-                });
-            } finally {
-                lock.unlock();
-            }
-
-        }
-        else if (message.startsWith("UPDATE_FOOD ")) {
-            lock.lock();
-            try {
-                List<Entity> newEntities = new ArrayList<>();
-                entities.removeIf(entity -> entity instanceof Food);  // Rimuovi solo il cibo
-
-                gameState.getFoodItems().clear();
-                for (int i = 1; i + 1 < parts.length; i += 2) {  // Controlla che ci siano abbastanza valori
-                    double x = Double.parseDouble(parts[i]);
-                    double y = Double.parseDouble(parts[i + 1]);
-
-                    Food food = new Food(new Vector2D(x, y), 10);
-                    gameState.getFoodItems().add(food);
-                    newEntities.add(food);
-                }
-                entities.addAll(newEntities);
-                SwingUtilities.invokeLater(() -> {
-                    gameWindow.updateGameController(gameController);
-                });
-            } finally {
-                lock.unlock();
-            }
-
-        }
-
-        else if (message.startsWith("REMOVE_PLAYER ")) {
-            String playerId = parts[1];
-            removePlayer(playerId);
-            SwingUtilities.invokeLater(() -> {
-                gameWindow.updateGameController(gameController);
-            });
-        }
-    }
     private void updatePlayerPosition(String playerId, double x, double y) {
-        Player existingPlayer = playerMap.get(playerId);
         lock.lock();
         try {
-            boolean found = false;
-            List<Entity> entitiesCopy = new ArrayList<>(entities);
-
-            for (Entity entity : entitiesCopy) {
-                if (entity instanceof Player && ((Player) entity).getId().equals(playerId)) {
-                    entity.setPosition(new Vector2D(x, y));
-                    found = true;
-                    break;
-                }
+            Player existingPlayer = playerMap.get(playerId);
+            if (existingPlayer != null) {
+                existingPlayer.setPosition(new Vector2D(x, y));
+            } else {
+                Player newPlayer = new Player(playerId);
+                newPlayer.setPosition(new Vector2D(x, y));
             }
-
-            if (!found) {
-                if (existingPlayer != null) {
-                    existingPlayer.setPosition(new Vector2D(x, y));
-                } else if (!playerId.equals(player.getId())) {
-                    Player newPlayer = new Player(playerId);
-                    newPlayer.setPosition(new Vector2D(x, y));
-                    playerMap.put(playerId, newPlayer);
-                    gameState.addPlayer(newPlayer);
-                    entities.add(newPlayer);
-                }
-            }
-
-            // Applicare lo stato aggiornato tramite GameController
-
-            SwingUtilities.invokeLater(() -> {
-                gameWindow.updateGameController(gameController);
-            });
         } finally {
             lock.unlock();
         }
-        // Aggiorna la UI
+    }
+    private void updateBotPosition(String botId,double x, double y) {
+
+            Bot existingBot = botMap.get(botId);
+            if (existingBot != null) {
+                existingBot.setPosition(new Vector2D(x, y));
+            }else{
+                Bot newBot = new Bot(new Vector2D(x,y), entities, gameController.getGameState(), botId);
+                newBot.setPosition(new Vector2D(x, y));
+            }
 
     }
-
+    private void updateFoodPosition(String foodId,double x, double y) {
+        Food existingFood = foodMap.get(foodId);
+        if (existingFood != null) {
+            existingFood.setPosition(new Vector2D(x, y));
+        }else{
+            Food newFood = new Food(new Vector2D(x,y),10,foodId);
+            newFood.setPosition(new Vector2D(x, y));
+        }
+    }
 
     private void removePlayer(String playerId) {
         synchronized (entities) {
-            entities.removeIf(entity -> entity instanceof Player && ((Player) entity).getId().equals(playerId));
+            gameController.getGameState().getEntities().removeIf(entity -> entity instanceof Player && ((Player) entity).getId().equals(playerId));
         }
-        synchronized (gameState.getPlayers()) {
-            gameState.getPlayers().removeIf(p -> p.getId().equals(playerId));
+        synchronized (gameController.getGameState().getPlayers()) {
+            gameController.getGameState().getPlayers().removeIf(p -> p.getId().equals(playerId));
         }
-
-        SwingUtilities.invokeLater(() -> {
-            gameWindow.updateGameController(gameController);
-        });
 
     }
 
@@ -374,7 +265,7 @@ public class GameClient {
         new Thread(() -> {
             while (connected) {
                 try {
-                    Thread.sleep(50); // Invia posizione ogni 50ms
+                    Thread.sleep(20); // Invia posizione ogni 50ms
                     updatePlayerPosition(player.getId(), player.getPosition().getX(), player.getPosition().getY());
                     out.println("MOVE " + player.getId() + " " + player.getPosition().getX() + " " + player.getPosition().getY());
                     System.out.println("Posizione inviata al server: " + player.getPosition().getX() + ", " + player.getPosition().getY());
@@ -389,20 +280,40 @@ public class GameClient {
     }
 
 
-    private void createGameWindow() {
-
+    private void createGameWindowSingleplayer() {
+        System.out.println("🔵 Creazione finestra di gioco...");
         gameFrame = new JFrame("VERMONI - Game Client");
         gameFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         gameFrame.setSize(800, 600);
-        gameWindow = new GameWindow(gameState, player);
+        gameWindow.getGameController().getPlayers().add(player);
         gameFrame.add(gameWindow);
         gameFrame.pack();
         gameFrame.setVisible(true);
-
-        Timer renderTimer = new Timer(16, e -> gameWindow.repaint());
+        Timer renderTimer = new Timer(20, e -> gameWindow.repaint());
         renderTimer.start();
+        System.out.println("🔵 Creata finestra di gioco...");
+    }
+    public void createOnlineGameWindow() {
+        JFrame gameFrame = new JFrame("Online Game");
+        gameFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        GameWindow gameWindowOnline = new GameWindow(this, onlineGameController);
+        gameWindowOnline.getGameController().getGameState().addPlayer(player);
+        gameFrame.add(gameWindowOnline);
+        gameFrame.pack();
+        gameFrame.setLocationRelativeTo(null);
+        gameFrame.setVisible(true);
     }
 
+
+    public Player getPlayer() {
+        return player;
+    }
+    public String getMessageFromServer(){
+        return messageFromServer;
+    }
+    public boolean isClosed(){
+        return socket.isClosed();
+    }
     public static void main(String[] args) {
         SwingUtilities.invokeLater(GameClient::new);
     }

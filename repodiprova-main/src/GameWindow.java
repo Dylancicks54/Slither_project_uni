@@ -1,64 +1,270 @@
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.util.ArrayList;
+
 import java.util.List;
 
 public class GameWindow extends JPanel implements KeyListener, MouseMotionListener {
-    private GameState gameState;
+    private OnlineGameController onlineGameController;
     private GameController gameController;
-    private Player player;
+    private GameClient gameClient;
+    private JFrame preLobbyFrame;
+    private boolean onlineMode = false;
+    // Costruttore per modalità offline (già esistente)
+    public GameWindow(GameClient gameClient){
+        this.gameClient = gameClient;
+        this.gameController = new GameController(this);
+        initialize();
+    }
 
-    public GameWindow(GameState gameState, Player player) {
-        this.gameState = gameState;
-        this.player = player;
+    // Costruttore per modalità online: viene passato anche il Client
+    public GameWindow(GameClient gameClient, OnlineGameController onlineGameController) {
+        this.onlineGameController = onlineGameController;
+        this.gameClient = gameClient;
+        this.onlineMode = true;
+        this.gameController = new GameController(this);
+
+        initialize();
+    }
+    private void initialize() {
         setPreferredSize(new Dimension(1920, 1080));
-        this.setFocusable(true);
-        this.requestFocusInWindow();
-        this.addKeyListener(this);
-        this.addMouseMotionListener(this);
-        // Avvia il game loop
-        Timer timer = new Timer(16, e -> updateGame());
+        setFocusable(true);
+        requestFocusInWindow();
+        addKeyListener(this);
+        addMouseMotionListener(this);
+        Timer timer = new Timer(20, e -> {
+            if (onlineMode) {
+                processNetworkUpdates();
+            } else {
+                gameController.updateGameState();
+            }
+            //repaint();
+        });
         timer.start();
-
     }
 
-    public void updateGameController(GameController gameController) {
-        if (gameController != null) {
-            gameController.applyGameState(gameState);
-            repaint(); // Chiamato per ridisegnare la vista
-        } else {
-            System.err.println("Ricevuto GameState nullo");
+    private void processNetworkUpdates() {
+        String message = gameClient.getMessageFromServer(); // Metodo che legge un messaggio dal server
+        if (message != null && !message.isEmpty()) {
+            gameClient.getMessageFromServer();
         }
+        repaint();
     }
 
-
-    @Override
-    protected void paintComponent(Graphics g) {
+    public void paintComponent2(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        int deltaX = (int) player.getPosition().getX() - getWidth() / 2;
-        int deltaY = (int) player.getPosition().getY() - getHeight() / 2;
+        // Calcola l'offset in base alla posizione del giocatore locale
+        int deltaX = (int) gameClient.getPlayer().getPosition().getX() - getWidth() / 2;
+        int deltaY = (int) gameClient.getPlayer().getPosition().getY() - getHeight() / 2;
 
+        // Disegna lo sfondo
         drawBackground(g2d);
-        //drawGrid(g2d, deltaX, deltaY);
-        drawEntities(g2d, deltaX, deltaY);
 
-        // Disegna i confini della mappa
+        // Prepariamo le liste per salvare le informazioni parsate dal messaggio
+        List<PlayerInfo> playersList = new ArrayList<>();
+        List<BotInfo> botsList = new ArrayList<>();
+        List<FoodInfo> foodsList = new ArrayList<>();
+
+        // Ottieni il messaggio aggiornato dal server
+        String message = gameClient.getMessageFromServer();
+        if (message != null && !message.isEmpty() && message.startsWith("GAME_STATE_UPDATE ")) {
+            String data = message.substring("GAME_STATE_UPDATE ".length());
+            String[] segments = data.split(";");
+
+            for (String segment : segments) {
+                segment = segment.trim();
+                if (segment.startsWith("PLAYER")) {
+                    String[] parts = segment.split(" ");
+                    if (parts.length >= 4) {
+                        String pid = parts[1];
+                        double x = 0, y = 0;
+                        try {
+                            x = Double.parseDouble(parts[2]);
+                            y = Double.parseDouble(parts[3]);
+                        } catch (NumberFormatException e) {
+                            System.err.println("Errore nel parsing delle coordinate del giocatore: " + parts[2] + ", " + parts[3]);
+                            continue; // Salta questo segmento se c'è un errore nel parsing
+                        }
+
+                        List<Segment> trail = new ArrayList<>();
+                        // Trova la parte con il messaggio dei segmenti, separato dal simbolo '|'
+                        if (segment.contains("SEGMENT")) {
+                            String segmentsData = segment.split("SEGMENT")[1].trim();
+                            String[] segmentPositions = segmentsData.split("\\|"); // Usa '|' come separatore
+                            for (String segmentPos : segmentPositions) {
+                                String[] pos = segmentPos.trim().split(" ");
+                                if (pos.length == 2) {
+                                    try {
+                                        double posX = Double.parseDouble(pos[0]);
+                                        double posY = Double.parseDouble(pos[1]);
+                                        trail.add(new Segment(new Vector2D(posX, posY), 17));
+                                    } catch (NumberFormatException e) {
+                                        System.err.println("Errore nel parsing del segmento: " + pos[0] + ", " + pos[1]);
+                                    }
+                                }
+                            }
+                        }
+                        playersList.add(new PlayerInfo(pid, x, y, trail));
+                    }
+                } else if (segment.startsWith("BOT")) {
+                    String[] parts = segment.split(" ");
+                    if (parts.length >= 4) {
+                        String bid = parts[1];
+                        double x = 0, y = 0;
+                        try {
+                            x = Double.parseDouble(parts[2]);
+                            y = Double.parseDouble(parts[3]);
+                        } catch (NumberFormatException e) {
+                            System.err.println("Errore nel parsing delle coordinate del bot: " + parts[2] + ", " + parts[3]);
+                            continue; // Salta questo segmento se c'è un errore nel parsing
+                        }
+
+                        List<Segment> trail = new ArrayList<>();
+                        // Trova la parte con il messaggio dei segmenti, separato dal simbolo '|'
+                        if (segment.contains("SEGMENT")) {
+                            String segmentsData = segment.split("SEGMENT")[1].trim();
+                            String[] segmentPositions = segmentsData.split("\\|"); // Usa '|' come separatore
+                            for (String segmentPos : segmentPositions) {
+                                String[] pos = segmentPos.trim().split(" ");
+                                if (pos.length == 2) {
+                                    try {
+                                        double posX = Double.parseDouble(pos[0]);
+                                        double posY = Double.parseDouble(pos[1]);
+                                        trail.add(new Segment(new Vector2D(posX, posY), 17));
+                                    } catch (NumberFormatException e) {
+                                        System.err.println("Errore nel parsing del segmento del bot: " + pos[0] + ", " + pos[1]);
+                                    }
+                                }
+                            }
+                        }
+                        botsList.add(new BotInfo(bid, x, y, trail));
+                    }
+                } else if (segment.startsWith("FOOD")) {
+                    String[] parts = segment.split(" ");
+                    if (parts.length >= 4) {
+                        String fid = parts[1];
+                        double x = 0, y = 0;
+                        try {
+                            x = Double.parseDouble(parts[2]);
+                            y = Double.parseDouble(parts[3]);
+                        } catch (NumberFormatException e) {
+                            System.err.println("Errore nel parsing del cibo: " + parts[2] + ", " + parts[3]);
+                            continue; // Salta questo segmento se c'è un errore nel parsing
+                        }
+                        foodsList.add(new FoodInfo(fid, x, y));
+                    }
+                }
+            }
+        }
+
+        // Disegna i segmenti e i giocatori
+        for (PlayerInfo pInfo : playersList) {
+            // Se il giocatore è quello locale, usa un colore diverso
+            if (pInfo.playerId.equals(gameClient.getPlayer().getId())) {
+                g2d.setColor(Color.BLUE);
+            } else {
+                g2d.setColor(Color.MAGENTA);
+            }
+            int screenX = (int) pInfo.x - deltaX;
+            int screenY = (int) pInfo.y - deltaY;
+
+            // Disegna i segmenti del giocatore
+            for (int i = 0; i < pInfo.getSegments().size(); i++) {
+                Segment segment = pInfo.getSegments().get(i);
+                int x = (int) segment.getPosition().getX() - deltaX;
+                int y = (int) segment.getPosition().getY() - deltaY;
+                int size = (int) segment.getSize();
+
+                // Disegna ogni segmento come un cerchio (puoi anche usare un rettangolo se preferisci)
+                g2d.fillOval(x - size / 2, y - size / 2, size, size);
+            }
+
+
+
+            g2d.fillOval(screenX - 10, screenY - 10, 20, 20);
+            g2d.setColor(Color.WHITE);
+            g2d.drawString(pInfo.playerId, screenX - (pInfo.playerId.length() * 3), screenY - 12);
+        }
+
+        // Disegna i bot
+        for (BotInfo bInfo : botsList) {
+            int screenX = (int) bInfo.x - deltaX;
+            int screenY = (int) bInfo.y - deltaY;
+
+            // Disegna i segmenti dei bot
+            g2d.setColor(Color.RED);
+            for (int i = 0; i < bInfo.getSegments().size(); i++) {
+                Segment segment = bInfo.getSegments().get(i);
+                int x = (int) segment.getPosition().getX() - deltaX;
+                int y = (int) segment.getPosition().getY() - deltaY;
+                int size = (int) segment.getSize();
+
+                // Disegna ogni segmento come un cerchio (puoi anche usare un rettangolo se preferisci)
+                g2d.fillOval(x - size / 2, y - size / 2, size, size);
+            }
+
+
+            g2d.setColor(Color.RED);
+            g2d.fillOval(screenX - 10, screenY - 10, 20, 20);
+        }
+
+        // Disegna il cibo
+        for (FoodInfo fInfo : foodsList) {
+            int screenX = (int) fInfo.x - deltaX;
+            int screenY = (int) fInfo.y - deltaY;
+            g2d.setColor(Color.GREEN);
+            g2d.fillOval(screenX - 5, screenY - 5, 10, 10);
+        }
+
+        // Disegna il rettangolo di confine e la zona rossa
         g2d.setColor(Color.RED);
         g2d.setStroke(new BasicStroke(9));
         g2d.drawRect(-deltaX, -deltaY, GameState.MAP_WIDTH, GameState.MAP_HEIGHT);
         zonaRossa(g2d, deltaX, deltaY);
 
+        // Se il giocatore è morto, mostra la schermata di morte
+        schermataMorte(gameClient.getPlayer(), g2d);
+    }
 
-        // Mostra la schermata di morte
-        schermataMorte(player, g2d);
+
+
+
+
+
+
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        if(onlineMode){
+            paintComponent2(g);
+        }else {
+            super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) g;
+
+            int deltaX = (int) gameClient.getPlayer().getPosition().getX() - getWidth() / 2;
+            int deltaY = (int) gameClient.getPlayer().getPosition().getY() - getHeight() / 2;
+
+            drawBackground(g2d);
+            //drawGrid(g2d, deltaX, deltaY);
+            drawEntities(g2d, deltaX, deltaY);
+
+            g2d.setColor(Color.RED);
+            g2d.setStroke(new BasicStroke(9));
+            g2d.drawRect(-deltaX, -deltaY, GameState.MAP_WIDTH, GameState.MAP_HEIGHT);
+            zonaRossa(g2d, deltaX, deltaY);
+
+            schermataMorte(gameClient.getPlayer(), g2d);
+        }
     }
     private void schermataMorte(Player p, Graphics2D g2d){
-        if (!player.isAlive()) {
+        if (!gameClient.getPlayer().isAlive()) {
             g2d.setColor(new Color(255, 0, 0, 150)); // Sfondo semi-trasparente
             g2d.fillRect(getWidth() / 2 - 200, getHeight() / 2 - 100, 400, 200); // Rettangolo menu
 
@@ -96,8 +302,8 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
         int spacing = size + 10;
         int spazioInMezzo = (int) (spacing * Math.sqrt(2));
 
-        int deltaX = (int) (-player.getPosition().getX() % spazioInMezzo);
-        int deltaY = (int) (-player.getPosition().getY() % spazioInMezzo);
+        int deltaX = (int) (-gameClient.getPlayer().getPosition().getX() % spazioInMezzo);
+        int deltaY = (int) (-gameClient.getPlayer().getPosition().getY() % spazioInMezzo);
 
         for (int x = deltaX - spazioInMezzo; x < getWidth() + spazioInMezzo; x += spazioInMezzo) {
             for (int y = deltaY - spazioInMezzo; y < getHeight() + spazioInMezzo; y += spazioInMezzo) {
@@ -115,6 +321,94 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
         g2d.setColor(color);
         g2d.fillPolygon(puntiX, puntiY, 8);
     }
+    public void showPreLobby() {
+        preLobbyFrame = new JFrame("SLITHER.IO");
+        preLobbyFrame.setSize(700, 500);
+        preLobbyFrame.setLocationRelativeTo(null);
+        preLobbyFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        // Carica l'immagine di sfondo e ridimensiona
+        ImageIcon background = new ImageIcon("repodiprova-main/src/slitherionew.jpeg");
+        Image backgroundImage = background.getImage().getScaledInstance(preLobbyFrame.getWidth(), preLobbyFrame.getHeight(), Image.SCALE_SMOOTH);
+        background = new ImageIcon(backgroundImage);
+        JLabel backgroundLabel = new JLabel(background);
+        backgroundLabel.setLayout(new BorderLayout()); // Usa BorderLayout per la finestra
+
+        JPanel panel = new JPanel();
+        panel.setOpaque(false); // Rende il pannello trasparente
+        panel.setLayout(new GridBagLayout()); // Layout per il contenuto
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.gridx = 0;
+
+        // Pannello per i bottoni
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setOpaque(false); // Pannello trasparente
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 10)); // Flusso centrato con spazio tra i bottoni
+
+        // Bottone Singleplayer
+        JButton singlePlayerButton = new JButton("Singleplayer");
+        styleButton(singlePlayerButton);
+        buttonPanel.add(singlePlayerButton);
+
+        // Bottone Multiplayer
+        JButton multiPlayerButton = new JButton("Multiplayer");
+        styleButton(multiPlayerButton);
+        buttonPanel.add(multiPlayerButton);
+
+        // Aggiungi il pannello dei bottoni alla parte inferiore della finestra
+        backgroundLabel.add(buttonPanel, BorderLayout.SOUTH); // Aggiunge i bottoni nella parte inferiore della finestra
+
+        // Azioni dei bottoni
+        singlePlayerButton.addActionListener(e -> {
+            gameClient.startSinglePlayer();
+            preLobbyFrame.dispose();
+        });
+
+        multiPlayerButton.addActionListener(e -> {
+
+            if (gameClient.isServerAvailable()) {
+                gameClient.startMultiplayer();
+                preLobbyFrame.dispose();
+            } else {
+                JOptionPane.showMessageDialog(preLobbyFrame, "Server non disponibile!", "Errore", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        // Aggiungi il pannello principale con il contenuto
+        backgroundLabel.add(panel, BorderLayout.CENTER);
+
+        preLobbyFrame.setContentPane(backgroundLabel);
+        preLobbyFrame.setVisible(true);
+    }
+
+
+    private void styleButton(JButton button) {
+        button.setFont(new Font("SansSerif", Font.BOLD, 22));  // Ingrandito il font per il testo del bottone
+        button.setPreferredSize(new Dimension(200, 60)); // Impostato una dimensione fissa (larghezza x altezza)
+        button.setBackground(new Color(50, 205, 50)); // Colore verde brillante
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createLineBorder(new Color(34, 139, 34), 2)); // Aggiungiamo un bordo verde scuro
+        button.setOpaque(true);
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(34, 139, 34)); // Colore verde scuro al passaggio del mouse
+            }
+
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(50, 205, 50)); // Torna al colore originale
+            }
+        });
+
+        // Aggiungi un'ombra
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED)
+        ));
+    }
+
 
 
 
@@ -128,9 +422,10 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
     }
 
     private void drawEntities(Graphics2D g2d, int offsetX, int offsetY) {
-        List<Player> players = gameState.getPlayers();
-        List<Bot> bots = gameState.getBots();
-        List<Food> foodItems = gameState.getFoodItems();
+
+        List<Player> players = gameController.getGameState().getPlayers();
+        List<Bot> bots = gameController.getGameState().getBots();
+        List<Food> foodItems = gameController.getGameState().getFoodItems();
 
         g2d.setColor(getRainbowColor());
         for (Food food : foodItems) {
@@ -143,13 +438,13 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
             g2d.setColor(Color.RED);
             int screenX = (int) bot.getPosition().getX() - offsetX;
             int screenY = (int) bot.getPosition().getY() - offsetY;
-            g2d.fillOval(screenX - 5, screenY - 5, 15, 15);
+            g2d.fillOval(screenX - 5, screenY - 5, 20, 20);
 
             g2d.setColor(Color.RED);
             for (Segment segment : bot.getBodySegments()) {
                 int segX = (int) segment.getPosition().getX() - offsetX;
                 int segY = (int) segment.getPosition().getY() - offsetY;
-                g2d.fillOval(segX - 5, segY - 5, 10, 10);
+                g2d.fillOval(segX - 5, segY - 5, 16, 16);
             }
         }
 
@@ -157,71 +452,87 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
             g2d.setColor(Color.BLUE);
             int screenX = (int) p.getPosition().getX() - offsetX;
             int screenY = (int) p.getPosition().getY() - offsetY;
-            g2d.fillOval(screenX - 10, screenY - 10, 15, 15);
+            g2d.fillOval(screenX - 10, screenY - 10, 20, 20);
 
             g2d.setColor(Color.BLUE);
             for (Segment segment : p.getBodySegments()) {
                 int segX = (int) segment.getPosition().getX() - offsetX;
                 int segY = (int) segment.getPosition().getY() - offsetY;
-                g2d.fillOval(segX - 5, segY - 5, 10, 10);
+                g2d.fillOval(segX - 5, segY - 5, 16, 16);
             }
         }
     }
-
-    /*private void drawEntityWithSegments(Graphics2D g2d, Entity entity, Color color, int offsetX, int offsetY) {
-        g2d.setColor(color);
-
-        int headSize = 20;  // Dimensione della testa
-        int segmentSize = (int) (headSize * 0.8);  // I segmenti sono più piccoli dell'80%
-
-        if (entity instanceof Bot) {
-            Bot bot = (Bot) entity;
-            for (Segment segment : bot.getBodySegments()) {
-                drawSegment(g2d, segment, segmentSize, offsetX, offsetY);
-            }
-        } else if (entity instanceof Player) {
-            Player player = (Player) entity;
-            for (Segment segment : player.getBodySegments()) {
-                drawSegment(g2d, segment, segmentSize, offsetX, offsetY);
-            }
+    class PlayerInfo {
+        String playerId;
+        double x, y;
+        List<Segment> segments = new ArrayList<>();
+        PlayerInfo(String playerId, double x, double y, List<Segment> segments) {
+            this.playerId = playerId;
+            this.x = x;
+            this.y = y;
+            this.segments.addAll(segments);
+        }
+        // Aggiungi un segmento alla lista
+        public void addSegment(Segment segment) {
+            segments.add(segment);
         }
 
-        // Disegna la testa dell'entità
-        int screenX = (int) entity.getPosition().getX() - offsetX;
-        int screenY = (int) entity.getPosition().getY() - offsetY;
-        g2d.fillOval(screenX - headSize / 2, screenY - headSize / 2, headSize, headSize);
-    }*/
+        // Ottieni i segmenti
+        public List<Segment> getSegments() {
+            return segments;
+        }
+    }
+    class BotInfo {
+        String botId;
+        double x, y;
+        List<Segment> segments = new ArrayList<>();
+        BotInfo(String botId,double x, double y, List<Segment> segments) {
+            this.botId = botId;
+            this.x = x;
+            this.y = y;
+            this.segments.addAll(segments);
+        }
+        // Aggiungi un segmento alla lista
+        public void addSegment(Segment segment) {
+            segments.add(segment);
+        }
 
-    private void drawSegment(Graphics2D g2d, Segment segment, int segmentSize, int offsetX, int offsetY) {
-        int screenX = (int) segment.getPosition().getX() - offsetX;
-        int screenY = (int) segment.getPosition().getY() - offsetY;
-        g2d.fillOval(screenX - segmentSize / 2, screenY - segmentSize / 2, segmentSize, segmentSize);
+        // Ottieni i segmenti
+        public List<Segment> getSegments() {
+            return segments;
+        }
+
+    }
+    class FoodInfo {
+        String foodId;
+        double x, y;
+        FoodInfo(String foodId,double x, double y) {
+            this.foodId = foodId;
+            this.x = x;
+            this.y = y;
+        }
     }
 
-    private void updateGame() {
-        gameState.updateGameState(); // Aggiorna la logica del gioco
-        repaint();  // Ridisegna lo schermo
-    }
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (player == null) return;
+        if (gameClient.getPlayer() == null) return;
 
         int keyCode = e.getKeyCode();
         switch (keyCode) {
 
             case KeyEvent.VK_SPACE:
-                player.activateBoost();
+                gameClient.getPlayer().activateBoost();
                 break;
-            case KeyEvent.VK_R: // Respawn se il player è morto
-                if (!player.isAlive()) {
-                    player.respawn();
-                    System.out.println("Player " + player.getId() + " has respawned!");
+            case KeyEvent.VK_R:
+                if (!gameClient.getPlayer().isAlive()) {
+                    gameClient.getPlayer().respawn();
+                    System.out.println("Player " + gameClient.getPlayer().getId() + " has respawned!");
                 }
                 break;
             case KeyEvent.VK_Q: // Esci dal gioco
                 System.out.println("Exiting game...");
-                System.exit(0); // Termina il programma
+                System.exit(0);
                 break;
         }
     }
@@ -230,12 +541,12 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
 
     @Override
     public void keyReleased(KeyEvent e) {
-        if (player == null) return;
+        if (gameClient.getPlayer() == null) return;
 
         int keyCode = e.getKeyCode();
         switch (keyCode) {
             case KeyEvent.VK_SPACE:
-                player.deactivateBoost();
+                gameClient.getPlayer().deactivateBoost();
                 break;
         }
     }
@@ -247,19 +558,21 @@ public class GameWindow extends JPanel implements KeyListener, MouseMotionListen
 
     @Override
     public void mouseMoved(MouseEvent e) {
-        if (player == null) return;
+        if (gameClient.getPlayer() == null) return;
 
-        // Calcola l'angolo tra il centro del canvas e la posizione del mouse
         Point mousePosition = e.getPoint();
         Point canvasCenter = new Point(this.getWidth() / 2, this.getHeight() / 2);
 
         double angle = Math.atan2(mousePosition.y - canvasCenter.y, mousePosition.x - canvasCenter.x);
-        player.setAngle(Math.toDegrees(angle));  // Imposta l'angolo del giocatore
+        gameClient.getPlayer().setAngle(Math.toDegrees(angle));  // Imposta l'angolo del giocatore
     }
 
     @Override
     public void mouseDragged(MouseEvent e) {
-        mouseMoved(e);  // Gestisce anche il movimento del mouse durante il drag
+        mouseMoved(e);
+    }
+
+    public GameController getGameController() {
+        return gameController;
     }
 }
-

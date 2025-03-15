@@ -1,6 +1,7 @@
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class Bot extends Entity {
     private Image segmentTexture;
@@ -9,9 +10,16 @@ public class Bot extends Entity {
     GameState gameState;
     double speed;
     List<Segment> segments = new ArrayList<>();
+    String id;
+
+    public Bot(String id, Vector2D position){
+        this.id = id;
+        this.position = position;
+        this.controller = new AIController(this, null);
+    }
 
 
-    public Bot(Vector2D startPosition, List<Entity> entities, GameState gameState) {
+    public Bot(Vector2D startPosition, List<Entity> entities, GameState gameState, String id) {
         this.position = startPosition;
         this.size = 17;
         this.velocity = new Vector2D(0, 0);
@@ -20,14 +28,17 @@ public class Bot extends Entity {
         this.speed = 2.5;
         this.segments = new ArrayList<>();
         this.gameState = gameState;  //  ASSEGNA GAMESTATE
+        this.id = id;
     }
 
 
     public static Bot createBot(List<Entity> entities, GameState gameState) {
         Vector2D newPosition;
         boolean positionValid;
+       String botId;
         do {
-            newPosition = new Vector2D(Math.random() * 800, Math.random() * 600);
+            botId = UUID.randomUUID().toString().substring(0, 8);
+            newPosition = new Vector2D(Math.random() * GameState.MAP_WIDTH, Math.random() * GameState.MAP_HEIGHT);
             positionValid = true;
             for (Entity entity : entities) {
                 if (newPosition.distanceTo(entity.getPosition()) < 50) {
@@ -37,7 +48,7 @@ public class Bot extends Entity {
             }
         } while (!positionValid);
 
-        return new Bot(newPosition, entities, gameState);
+        return new Bot(newPosition, entities, gameState, botId);
     }
 
 
@@ -98,6 +109,11 @@ public class Bot extends Entity {
     public boolean collidesWith(Entity other) {
         double distance = this.position.distanceTo(other.position);
         return distance < (this.size + other.size);
+    }
+
+    public boolean collidesSegment(Segment segment) {
+        double distance = this.position.distanceTo(segment.getPosition());
+        return distance < (this.size + segment.getSize());
     }
 
     // Aggiungi un metodo per ottenere il GameState (se non è già presente)
@@ -175,6 +191,14 @@ public class Bot extends Entity {
         return speed; // Metodo per ottenere la velocità
     }
 
+    public String getId(){
+        return id;
+    }
+    public void addBodySegment(Segment segment) {
+        this.segments.add(segment);
+    }
 
-
+    public List<Segment> getSegments() {
+        return segments;
+    }
 }
