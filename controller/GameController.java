@@ -45,6 +45,7 @@ public class GameController extends AbstractGameController implements KeyListene
     public void mouseMoved(MouseEvent e) {
             int mouseX = e.getX();
             int mouseY = e.getY();
+
             gameState.getSnake().setMouseX(mouseX);
             gameState.getSnake().setMouseY(mouseY);
     }

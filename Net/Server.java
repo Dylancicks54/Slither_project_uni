@@ -35,7 +35,7 @@ public class Server {
                 ClientHandler clientHandler = new ClientHandler(socket,users);
                 System.out.println("SERVER: New player connected: "+clientHandler.getClientUserName());
                 clientHandlers.add(clientHandler);
-                gameServer.addPlayer(clientHandler,new Snake(startPos(), Direction.RIGHT));
+                gameServer.addPlayer(clientHandler,new Snake(startPos(), startPos(),Direction.RIGHT));
                 Thread thread = new Thread(clientHandler);
                 thread.start();
             }
@@ -49,8 +49,9 @@ public class Server {
      */
     public int startPos (){
         Random rand = new Random();
-        return rand.nextInt(100)+100;
+        return rand.nextInt(1500);
     }
+
     public void closeServerSocket() {
         try {
             if (serverSocket != null) {

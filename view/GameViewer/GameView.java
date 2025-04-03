@@ -45,4 +45,13 @@ public abstract class GameView extends JPanel{
     public void showLoseDialog() {
         JOptionPane.showMessageDialog(this, "You lost!", "Game Over", JOptionPane.INFORMATION_MESSAGE);
     }
+
+    public static void drawCross(Graphics2D g2d, Color color, int strokeWidth, int x, int y, int sizeCross){
+        g2d.setColor(color);
+        g2d.setStroke(new BasicStroke(strokeWidth));
+        int hSize = sizeCross/2;
+        g2d.drawLine(x - hSize, y, x + hSize, y);
+        g2d.drawLine(x, y - hSize, x, y + hSize);
+    }
+
 }

@@ -23,7 +23,9 @@ public class GameState {
     private static final double ATTRACT_SPEED = 2.0;
 
     public GameState(GameController controller){
-        this.snake=new Snake(110,Direction.RIGHT);
+
+        Random random = new Random();
+        this.snake =new Snake(random.nextInt(1500), random.nextInt(1500), Direction.RIGHT);
         this.score = 0;
         this.gameTimer=new Timer();
         this.foodTimer=new Timer();
@@ -35,11 +37,12 @@ public class GameState {
         this.aiSnakes=new ArrayList<>();
 
 
+
             for (int i = 0; i < 100; i++) {
                 generateFood(1500,1500);
             }
             for (int i = 0; i < 5; i++) {
-                aiSnakes.add(new AISnake((int)(Math.random() * GameWindow.getWindowWidth()), Direction.DOWN, foods));
+                aiSnakes.add(new AISnake(random.nextInt(1500), random.nextInt(1500),Direction.DOWN, foods));
             }
 
         gameStart();
@@ -169,7 +172,7 @@ public class GameState {
     }
 
     public boolean checkBodyCollision(){
-        return snake.getBody().get(0).getX() <= 0 || snake.getBody().get(0).getX() >= 1533 || snake.getBody().get(0).getY() >= 1533 || snake.getBody().get(0).getY() <= -100;
+        return snake.getBody().get(0).getX() <= 0 || snake.getBody().get(0).getX() >= (1550 - 15) || snake.getBody().get(0).getY() >= (1550-15) || snake.getBody().get(0).getY() <= 0;
     }
 
     private void applyMagnetEffect() {
@@ -361,7 +364,7 @@ public class GameState {
 
         } while (!validPosition); // Continua a generare finché non trovi una posizione libera
 
-        return new AISnake(spawnX, Direction.DOWN, foods);
+        return new AISnake(spawnX, spawnY,Direction.DOWN, foods);
     }
 
     // Metodo helper per controllare se una posizione collide con un serpente

@@ -3,7 +3,9 @@ import view.GameWindow;
 
 import java.awt.*;
 import java.util.LinkedList;
+
 public class Snake {
+
     private LinkedList<SnakeBodyPart> body;
     private int position;
     private int startSize=5;
@@ -15,6 +17,8 @@ public class Snake {
 
     private int slow;
 
+    //COSTRUTTORE VECCHIO (TENUTO PER SICUREZZA) - DA CANCELLARE SE IL CODICE E' STABILE
+    /*
     public Snake(int position,Direction d){
         this.slow=0;
         this.direction=d;
@@ -23,10 +27,28 @@ public class Snake {
         this.mouseY=0;
         this.isAccelerating=false;
         this.body=new LinkedList<>();
+
         for(int i=startSize;i>0;i--){
             body.add(new SnakeBodyPart(i*position, Toolkit.getDefaultToolkit().getScreenSize().height/2));
         }
     }
+     */
+
+    public Snake(int x,int y,Direction d){
+        this.slow=0;
+        this.direction=d;
+        //this.position=position;
+
+        this.mouseX=0;
+        this.mouseY=0;
+        this.isAccelerating=false;
+        this.body=new LinkedList<>();
+
+        for(int i=startSize;i>0;i--){
+            body.add(new SnakeBodyPart(x, y));
+        }
+    }
+
     public void move(int mouseX, int mouseY) {
 
         for (int i = body.size() - 1; i > 0; i--) {

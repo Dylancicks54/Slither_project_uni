@@ -8,10 +8,19 @@ public class AISnake extends Snake{
     private Pair lookingTo;
     /**
      * constructor initialize a snake and the first point where the snake is looking to*/
+    //VECCHIO COSTRUTTORE (TENUTO PER SICUREZZA) - DA CANCELLARE SE RISULTA STABILE IL CODICE NUOVO
+    /*
     public AISnake(int position, Direction direction,ArrayList<Food> foods) {
         super(position, direction);
         lookingTo=closestFood(foods);
     }
+     */
+
+    public AISnake(int x, int y, Direction direction,ArrayList<Food> foods) {
+        super(x, y, direction);
+        lookingTo=closestFood(foods);
+    }
+
     /**
      *this method moves the bot snake towards the closest food
      * @param foods ArrayList of all foods in the game

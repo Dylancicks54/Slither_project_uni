@@ -13,16 +13,20 @@ public class SoloGameView extends GameView {
     private Image snakeImage;
     private Image aisnakeImage;
     private JLabel timerLabel;
+
     public SoloGameView() {
 
         this.gc=new GameController(this);
+
         snakeImage=new ImageIcon(this.getClass().getResource("/resources/serpent.png")).getImage();
         aisnakeImage=new ImageIcon(this.getClass().getResource("/resources/serpent2.png")).getImage();
+
         foodImage=new Image[4];
         foodImage[0] = new ImageIcon(this.getClass().getResource("/resources/food.png")).getImage();
         foodImage[1] = new ImageIcon(this.getClass().getResource("/resources/food1.png")).getImage();
         foodImage[2] = new ImageIcon(this.getClass().getResource("/resources/food2.png")).getImage();
         foodImage[3] = new ImageIcon(this.getClass().getResource("/resources/food3.png")).getImage();
+
         timerLabel = new JLabel();
         timerLabel.setFont(new Font("Arial", Font.BOLD, 20));
         timerLabel.setForeground(Color.WHITE);
@@ -32,15 +36,27 @@ public class SoloGameView extends GameView {
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         //g.drawImage(background, 0, 0, 1100, 600, this);
-        Graphics2D g2d = (Graphics2D) g;
-            drawBackground(g2d);
 
-        // Calcul des décalages pour centrer le serpent
+        //Disegno lo sfondo
+        Graphics2D g2d = (Graphics2D) g;
+        drawBackground(g2d);
+
+        //Calcolo la distanza del serpente dal centro dello schermo
         int deltaX = getWidth() / 2 - gc.getGameState().getSnake().getBody().get(0).getX();
         int deltaY = getHeight() / 2 - gc.getGameState().getSnake().getBody().get(0).getY();
 
+        //DEBUG
+        //GameView.drawCross(g2d, Color.YELLOW, 3, 110, Toolkit.getDefaultToolkit().getScreenSize().height/2, 20);
+        //GameView.drawCross(g2d,Color.GREEN, 3, deltaX + 100, deltaY + 100, 200);
+        //GameView.drawCross(g2d, Color.YELLOW, 3, getWidth()/2, getHeight()/2, 20);
+        //GameView.drawCross(g2d, Color.GREEN, 3, headX + deltaX, headY + deltaY, 20);
+        //GameView.drawCross(g2d, Color.CYAN, 3, deltaX, deltaY, 20);
+
+
+        //Coloro l'area esterna di gioco
         zonaRossa(g2d, deltaX, deltaY);
-        // Dessin du fond en fonction des décalages
+
+        //Disegno il giocatore
         for (int i = 0; i < gc.getGameState().getSnake().getBody().size(); i++) {
             int x = gc.getGameState().getSnake().getBody().get(i).getX() + deltaX;
             int y = gc.getGameState().getSnake().getBody().get(i).getY() + deltaY;
@@ -48,12 +64,16 @@ public class SoloGameView extends GameView {
             g.drawImage(snakeImage, x, y, 15, 15, this);
         }
 
-            /*draw AI objective*/
-            g2d.setColor(Color.RED);
-            g2d.setStroke(new BasicStroke(3));
+        //PARTE BOT
+        g2d.setColor(Color.RED);
+        g2d.setStroke(new BasicStroke(3));
         List<AISnake> snakes = new ArrayList<>(gc.getGameState().getAiSnakes());
+
         for (AISnake snake : snakes) {
+            //Evidenzio il bersaglio del bot
             g2d.drawOval(snake.getLookingTo().getX() + deltaX, snake.getLookingTo().getY() + deltaY, 15, 15);
+
+            //Disegno i bot
             for (int i = 0; i < snake.getBody().size(); i++) {
                 int x = snake.getBody().get(i).getX() + deltaX;
                 int y = snake.getBody().get(i).getY() + deltaY;
@@ -62,20 +82,28 @@ public class SoloGameView extends GameView {
             }
         }
 
+        //Disegno minimappa
         drawMiniMap(g2d);
-        //Graphics2D g2d = (Graphics2D) g;
-            g2d.setColor(Color.RED);
-            g2d.setStroke(new BasicStroke(3)); // Épaisseur de la ligne
-            g2d.drawLine(deltaX, -100 + deltaY, 1550 + deltaX, -100 + deltaY);
-            g2d.drawLine(1550 + deltaX, -100 + deltaY, 1550 + deltaX, 1550 + deltaY);
-            g2d.drawLine(deltaX, -100 + deltaY, deltaX, 1550 + deltaY);
-            g2d.drawLine(deltaX, 1550 + deltaY, 1550 + deltaX, 1550 + deltaY);
 
+        g2d.setColor(Color.RED);
+        g2d.setStroke(new BasicStroke(3));
+        //BORDO SINISTRA
+        g2d.drawLine(deltaX, deltaY, deltaX, deltaY + 1550);
+        //BORDO ALTO
+        g2d.drawLine(deltaX, deltaY, deltaX + 1550, deltaY);
+        //BORDO DESTRO
+        g2d.drawLine(deltaX + 1550, deltaY, deltaX + 1550, deltaY + 1550);
+        //BORDO BASSO
+        g2d.drawLine(deltaX, deltaY + 1550, deltaX + 1550, deltaY + 1550);
+
+        //Metto il tempo ed il punteggio
         timerLabel.setText("Time: " + gc.getGameState().getRemainingTime() + "s");
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.PLAIN, 16));
         g.drawString("Score: " + gc.getGameState().getScore(), 10, 20);
-        //using a standard for loop fix the ConcurrentModificationException
+
+        //DISEGNO IL CIBO
+        //uso un loop for per risolvere ConcurrentModificationException
         for (int i = 0; i < gc.getGameState().getFoods().size(); i++) {
             Food food = gc.getGameState().getFoods().get(i);
             int x = food.getX() + deltaX;
@@ -96,8 +124,8 @@ public class SoloGameView extends GameView {
         int deltaX;
         int deltaY;
 
-            deltaX =  (-gc.getGameState().getSnake().getBody().getFirst().getX() % spazioInMezzo);
-            deltaY =  (-gc.getGameState().getSnake().getBody().getFirst().getY() % spazioInMezzo);
+        deltaX =  (-gc.getGameState().getSnake().getBody().getFirst().getX() % spazioInMezzo);
+        deltaY =  (-gc.getGameState().getSnake().getBody().getFirst().getY() % spazioInMezzo);
 
         for (int x = deltaX - spazioInMezzo; x < getWidth() + spazioInMezzo; x += spazioInMezzo) {
             for (int y = deltaY - spazioInMezzo; y < getHeight() + spazioInMezzo; y += spazioInMezzo) {
@@ -114,14 +142,16 @@ public class SoloGameView extends GameView {
         g2d.setColor(color);
         g2d.fillPolygon(puntiX, puntiY, 8);
     }
+
     private void zonaRossa(Graphics2D g2d, int deltaX, int deltaY) {
         Color zoneColor = new Color(115, 1, 1, 150);
         g2d.setColor(zoneColor);
 
         int borderLeft   = deltaX;
-        int borderTop    = -100 + deltaY;
-        int borderRight  = 1550 + deltaX;
-        int borderBottom = 1550 + deltaY;
+        int borderTop    = deltaY;
+
+        int borderRight  = deltaX + 1550;
+        int borderBottom = deltaY + 1550;
 
         int screenWidth  = getWidth();
         int screenHeight = getHeight();
