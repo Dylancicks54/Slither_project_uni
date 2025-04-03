@@ -10,87 +10,118 @@ import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
-/**
- *This class extend JFrame, is the interface to join a server hosted game and enable the user to change his username
- * and enter a specific ip for the server (for default it connect to a local hosted server)
- */
+
 public class ConnectionMenu extends JFrame {
     private Client client;
-    public ConnectionMenu(){
+
+    public ConnectionMenu() {
         setTitle("Slither.io Menu");
-        setSize(600, 500);
+        setSize(1100, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
-        setLayout(null); // Use null layout manager for absolute positioning
+        setLayout(null);
 
-        JButton join = new JButton("Join");
+        // Dimensioni della finestra
+        int frameWidth = 1100;
+        int frameHeight = 600;
 
-        join.setBackground(new Color(0, 255, 0));
-        join.setForeground(Color.WHITE);
-        join.setFont(new Font("Arial", Font.BOLD, 20));
-        join.setBounds(200, 230, 200, 50);
-        add(join);
+        // Carica e scala l'immagine di background
+        ImageIcon backgroundImageIcon = new ImageIcon("resources/background_menu.jpg");
+        Image backgroundImage = backgroundImageIcon.getImage();
+        Image scaledBackground = backgroundImage.getScaledInstance(frameWidth, frameHeight, Image.SCALE_SMOOTH);
+        ImageIcon scaledBackgroundIcon = new ImageIcon(scaledBackground);
+        JLabel backgroundLabel = new JLabel(scaledBackgroundIcon);
+        backgroundLabel.setBounds(0, 0, frameWidth, frameHeight);
+
+        // Titolo (spostato leggermente più in alto)
+        int titleWidth = 400;
+        int titleHeight = 60;
+        JLabel titleLabel = new JLabel("SLITHER.IO GAME", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 34));
+        titleLabel.setForeground(Color.RED);
+        titleLabel.setBounds((frameWidth - titleWidth) / 2, 20, titleWidth, titleHeight);
+
+        // Host Address Field
+        int hostWidth = 200;
+        int hostHeight = 40;
         JTextField hostAddress = new JTextField("localhost");
-        hostAddress.setBounds(230,120,140,20);
-        hostAddress.setBackground(null);
-        hostAddress.setBorder(null);
-        hostAddress.setFont(new Font("Arial", Font.BOLD, 10));
+        hostAddress.setBounds((frameWidth - hostWidth) / 2 , 150, hostWidth, hostHeight);
+        hostAddress.setBackground(Color.BLACK);
+        hostAddress.setForeground(Color.RED);
+        hostAddress.setFont(new Font("Arial", Font.BOLD, 18));
         hostAddress.setHorizontalAlignment(JTextField.CENTER);
-        //empty the textField when it's clicked by the user (ensure a default host address)
+        hostAddress.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
         hostAddress.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 hostAddress.setText("");
             }
         });
-        add(hostAddress);
-        JTextField usernameTextBox=new JTextField("your username");
-        usernameTextBox.setBounds(200, 160, 200, 50);
-        usernameTextBox.setBackground(null);
-        usernameTextBox.setBorder(null);
-        usernameTextBox.setToolTipText("your username");
-        usernameTextBox.setFont(new Font("Arial", Font.BOLD, 20));
+
+        // Username Field (ingrandito)
+        int usernameWidth = 250;
+        int usernameHeight = 60;
+        JTextField usernameTextBox = new JTextField("Your Username");
+        usernameTextBox.setBounds((frameWidth - usernameWidth) / 2, 250, usernameWidth, usernameHeight);
+        usernameTextBox.setBackground(Color.BLACK);
+        usernameTextBox.setForeground(Color.RED);
+        usernameTextBox.setFont(new Font("Arial", Font.BOLD, 22));
         usernameTextBox.setHorizontalAlignment(JTextField.CENTER);
-        //empty the textField when it's clicked by the user (ensure a default username)
-        usernameTextBox.addMouseListener(new MouseAdapter(){
+        usernameTextBox.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
+        usernameTextBox.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseClicked(MouseEvent e){
+            public void mouseClicked(MouseEvent e) {
                 usernameTextBox.setText("");
             }
         });
-        add(usernameTextBox,BorderLayout.CENTER);
-        //when the join button in clicked
+
+        // Join Button (ingrandito e abbassato leggermente)
+        int buttonWidth = 250;
+        int buttonHeight = 60;
+        JButton join = new JButton("JOIN");
+        join.setBounds((frameWidth - buttonWidth) / 2, 350, buttonWidth, buttonHeight);
+        join.setBackground(Color.RED);
+        join.setForeground(Color.BLACK);
+        join.setFont(new Font("Arial", Font.BOLD, 24));
+        join.setBorder(BorderFactory.createLineBorder(Color.BLACK, 3));
+        join.setFocusPainted(false);
+        join.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                join.setBackground(Color.BLACK);
+                join.setForeground(Color.RED);
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                join.setBackground(Color.RED);
+                join.setForeground(Color.BLACK);
+            }
+        });
+
         join.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
                 dispose();
-                String username=usernameTextBox.getText();
+                String username = usernameTextBox.getText();
                 String hostAdressString = hostAddress.getText();
                 try {
-                    System.out.println(InetAddress.getLocalHost());
-                    Socket socket = new Socket(InetAddress.getByName(hostAdressString),1234);//open a sever at a specified host address at post 1234 (default port for all this project)
-                    Client client = new Client(socket,username);
+                    Socket socket = new Socket(InetAddress.getByName(hostAdressString), 1234);
+                    Client client = new Client(socket, username);
                     client.confirmConnection();
                     new Thread(client::listenForMessage).start();
                     new GameWindow(client);
-                }catch (IOException ignore){
+                } catch (IOException ignore) {
                     System.out.println("CLIENT: connection error");
                     new ShowPreLobby().setVisible(true);
                 }
             }
         });
 
-        JLabel titleLabel = new JLabel("Slither.io Game");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setForeground(Color.WHITE);
-        titleLabel.setBackground(Color.BLACK);
-        titleLabel.setBounds(210, 50, 300, 50);
+        // Aggiungi i componenti
         add(titleLabel);
-
-        ImageIcon backgroundImage = new ImageIcon("C:\\yassine\\Java\\Projectsss\\NewSlither\\ressources\\MenuBackgound.jpg");
-        JLabel backgroundLabel = new JLabel(backgroundImage);
-        backgroundLabel.setBounds(0, 0, getWidth(), getHeight());
+        add(hostAddress);
+        add(usernameTextBox);
+        add(join);
         add(backgroundLabel);
 
         getContentPane().setBackground(Color.BLACK);

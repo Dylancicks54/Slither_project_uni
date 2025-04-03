@@ -3,12 +3,12 @@ package model;
 public class Food implements Point{
     private int x;
     private int y;
-    private int color;
+    private int colore;
     private int size;
     public Food(int x,int y,int color, int size){
         this.x = x;
         this.y = y;
-        this.color = color;
+        this.colore = color;
         this.size = size;
     }
     public int getX() {
@@ -23,11 +23,11 @@ public class Food implements Point{
     public void setY(int y) {
         this.y = y;
     }
-    public int getColor() {
-        return color;
+    public int getColore() {
+        return colore;
     }
-    public void setColor(int color) {
-        this.color = color;
+    public void setColore(int colore) {
+        this.colore = colore;
     }
     public int getSize() {
         return size;

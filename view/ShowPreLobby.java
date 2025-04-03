@@ -19,7 +19,7 @@ public class ShowPreLobby extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         // Caricamento e ridimensionamento dell'immagine di background
-        background = new ImageIcon(getClass().getResource("/ressources/slitherionew.jpeg"));
+        background = new ImageIcon(getClass().getResource("/resources/slitherionew.jpeg"));
         backgroundImage = background.getImage().getScaledInstance(getWidth(), getHeight(), Image.SCALE_SMOOTH);
         background = new ImageIcon(backgroundImage);
         JLabel backgroundLabel = new JLabel(background);

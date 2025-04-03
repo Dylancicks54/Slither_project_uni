@@ -18,7 +18,7 @@ public class ClientHandler implements Runnable{
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
 
-    private String clientUserNamme;
+    private String clientUserName;
 
     private String newPos;
 
@@ -34,13 +34,12 @@ public class ClientHandler implements Runnable{
             this.socket = socket;
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            this.clientUserNamme = bufferedReader.readLine();
-            while (users.contains(this.clientUserNamme)){
-                this.clientUserNamme+=1;
+            this.clientUserName = bufferedReader.readLine();
+            while (users.contains(this.clientUserName)){
+                this.clientUserName +=1;
             }
             clientHandlers.add(this);
-            users.add(this.clientUserNamme);
-            //broadcastMessage("SERVER: " + clientUserNamme + "has entered the chat");
+            users.add(this.clientUserName);
         }catch (IOException e){
             closeEverything(socket,bufferedWriter,bufferedReader);
         }
@@ -60,7 +59,7 @@ public class ClientHandler implements Runnable{
             try{
                 messageFromClient = bufferedReader.readLine();
                 if(messageFromClient==null) {
-                    System.out.println("SERVER: \""+clientUserNamme+"\" disconnected");
+                    System.out.println("SERVER: \""+ clientUserName +"\" disconnected");
                     closeEverything(socket, bufferedWriter, bufferedReader);
                 }
                 newPos = messageFromClient;
@@ -82,12 +81,12 @@ public class ClientHandler implements Runnable{
      * @param messageToSend String
      */
     public void broadcastMessage(String messageToSend){
-        for (ClientHandler clinetHandler : clientHandlers){
+        for (ClientHandler clientHandler : clientHandlers){
             try{
-                if(!clinetHandler.clientUserNamme.equals(clientUserNamme)){
-                    clinetHandler.bufferedWriter.write(messageToSend);
-                    clinetHandler.bufferedWriter.newLine();
-                    clinetHandler.bufferedWriter.flush();
+                if(!clientHandler.clientUserName.equals(clientUserName)){
+                    clientHandler.bufferedWriter.write(messageToSend);
+                    clientHandler.bufferedWriter.newLine();
+                    clientHandler.bufferedWriter.flush();
                 }
             }catch (IOException e){
                 closeEverything(socket,bufferedWriter,bufferedReader);
@@ -108,17 +107,17 @@ public class ClientHandler implements Runnable{
         }
     }
 
-    /**
-     * write to all client connected
-     */
-    public void writeToAll(String mes){
-        for(ClientHandler clientHandler: clientHandlers){
-            clientHandler.write(mes);
-        }
-    }
+//    /**
+//     * write to all client connected
+//     */
+//    public void writeToAll(String mes){
+//        for(ClientHandler clientHandler: clientHandlers){
+//            clientHandler.write(mes);
+//        }
+//    }
     public void removeClientHandler(){
         clientHandlers.remove(this);
-        broadcastMessage("SERVER: \"" + clientUserNamme + "\" has left");
+        broadcastMessage("SERVER: \"" + clientUserName + "\" has left");
     }
 
     public void closeEverything(Socket socket, BufferedWriter bufferedWriter, BufferedReader bufferedReader) {
@@ -139,12 +138,8 @@ public class ClientHandler implements Runnable{
         return isAlive;
     }
 
-    public static List<ClientHandler> getPlayers(){
-        return clientHandlers;
-    }
-
-    public String getClientUserNamme() {
-        return clientUserNamme;
+    public String getClientUserName() {
+        return clientUserName;
     }
 
     public String getNewPos() {

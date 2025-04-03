@@ -13,7 +13,7 @@ public class GameServer {
     private final List<Pair> foods;
     private final Server server;
 
-    private final int borderX = 5000;
+    public final int borderX = 5000;
     public final int bordery = 5000;
 
 
@@ -25,10 +25,6 @@ public class GameServer {
         players= new ConcurrentHashMap<>();
         foods=new ArrayList<>();
         this.server = server;
-    }
-
-    public Map<ClientHandler, Snake> getPlayers() {
-        return players;
     }
 
     /**
@@ -61,7 +57,7 @@ public class GameServer {
                 if(entry.getKey().getNewPos()==null)
                     continue;
 
-                Pair newPos = stringToPos(entry.getKey().getNewPos(),entry.getKey().getClientUserNamme());
+                Pair newPos = stringToPos(entry.getKey().getNewPos(),entry.getKey().getClientUserName());
                 entry.getValue().move(newPos.getX(),newPos.getY());
 
                 checkFoodCollision(entry.getValue());
@@ -186,7 +182,7 @@ public class GameServer {
             stringBuilder.append(pair.toString());
             stringBuilder.append(",");
         }
-
+        System.out.println(stringBuilder.toString());
         server.sendMessage(stringBuilder.toString());
     }
 

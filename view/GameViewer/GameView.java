@@ -21,6 +21,7 @@ public abstract class GameView extends JPanel{
             closeCurrentGameWindow();
         });
     }
+
     /**
      * close the current game window
      * */

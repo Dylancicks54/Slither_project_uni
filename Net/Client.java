@@ -92,7 +92,7 @@ public class Client {
                     continue;
                 }
                 snakes=messageFromServer.split("&")[0];
-                System.out.println(snakes);
+                //System.out.println(snakes);
                 foods=messageFromServer.split("&")[1];
 
             }catch (IOException e){

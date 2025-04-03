@@ -21,4 +21,31 @@ public class OnlineGameController extends AbstractGameController {
         client.write(Serialize.serializePlayerPos(mouseX, mouseY));
     }
 
+    public int[] getPlayerPosition() {
+        // Estrai la posizione del giocatore dal messaggio del server
+        String snakesData = client.getSnakes();
+        if (snakesData != null && !snakesData.isEmpty()) {
+            // Suddividi la stringa usando la virgola come separatore
+            String[] snakeParts = snakesData.split(",");
+            int startIndex = 0;
+            // Se il primo elemento non contiene ":" probabilmente Ã¨ un identificatore (es. "g")
+            if (snakeParts.length > 0 && !snakeParts[0].contains(":")) {
+                startIndex = 1;
+            }
+            if (snakeParts.length > startIndex) {
+                // Si assume che il formato atteso sia "x:y"
+                String[] coords = snakeParts[startIndex].split(":");
+                if (coords.length >= 2) {
+                    try {
+                        int x = Integer.parseInt(coords[0].trim());
+                        int y = Integer.parseInt(coords[1].trim());
+                        return new int[]{x, y};
+                    } catch (NumberFormatException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        return new int[]{0, 0}; // Valori di default se non ci sono dati validi
+    }
 }

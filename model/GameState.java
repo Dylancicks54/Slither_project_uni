@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Timer;
 public class GameState {
     private Snake snake;
-    private Snake snake2;
     private List<AISnake> aiSnakes;
     private List<AISnake> snakes;
     private Timer gameTimer;
@@ -173,15 +172,6 @@ public class GameState {
         return snake.getBody().get(0).getX() <= 0 || snake.getBody().get(0).getX() >= 1533 || snake.getBody().get(0).getY() >= 1533 || snake.getBody().get(0).getY() <= -100;
     }
 
-    public int checkBody2Collision(){
-        if(snake.getBody().get(0).getX() <= 0 || snake.getBody().get(0).getX() >= 1070 || snake.getBody().get(0).getY() >= 550 || snake.getBody().get(0).getY() <= 0){
-            return 2;
-        }
-        if(snake2.getBody().get(0).getX() <= 0 || snake2.getBody().get(0).getX() >= 1070 || snake2.getBody().get(0).getY() >= 550 || snake2.getBody().get(0).getY() <= 0){
-            return 1;
-        }
-        return 0;
-    }
     private void applyMagnetEffect() {
         List<Food> foodToRemove = new ArrayList<>();
         List<Food> foodsCopy;
@@ -413,18 +403,12 @@ public class GameState {
     public Snake getSnake() {
         return snake;
     }
-    public Snake getSnake2() {
-        return snake2;
-    }
     public List<AISnake> getAiSnakes(){
         return aiSnakes;
     }
 
     public int getRemainingTime() {
         return (int)remainingTime/40;
-    }
-    public GameController getController() {
-        return controller;
     }
     public int getScore() {
         return score;

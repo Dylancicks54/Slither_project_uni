@@ -9,7 +9,7 @@ public class Snake {
     private int startSize=5;
     private Direction direction;
     private boolean isAccelerating;
-    private int speed=5;  // Nouvelle variable pour stocker la vitesse actuelle
+    private int speed = 5;
     private   int initialSpeed = 5;
     private int mouseX, mouseY;
 
@@ -22,54 +22,10 @@ public class Snake {
         this.mouseX=0;
         this.mouseY=0;
         this.isAccelerating=false;
-        this.body=new LinkedList<SnakeBodyPart>();
+        this.body=new LinkedList<>();
         for(int i=startSize;i>0;i--){
             body.add(new SnakeBodyPart(i*position, Toolkit.getDefaultToolkit().getScreenSize().height/2));
         }
-    }
-    public void reset() {
-        body.clear();
-        for (int i = startSize; i > 0; i--) {
-            body.add(new SnakeBodyPart(i * this.position, 10));
-        }
-        direction = Direction.RIGHT;
-        isAccelerating = false;
-        speed = initialSpeed;
-        mouseX = 0;
-        mouseY = 0;
-    }
-    public void move2(Direction direction){
-        switch (direction) {
-            case UP:
-                for (int i = body.size() - 1; i > 0; i--) {
-                    body.get(i).setX(body.get(i - 1).getX());
-                    body.get(i).setY(body.get(i - 1).getY());
-                }
-                body.get(0).setY(body.get(0).getY() - speed);
-                break;
-            case DOWN:
-                for (int i = body.size() - 1; i > 0; i--) {
-                    body.get(i).setX(body.get(i - 1).getX());
-                    body.get(i).setY(body.get(i - 1).getY());
-                }
-                body.get(0).setY(body.get(0).getY() + speed);
-                break;
-            case LEFT:
-                for (int i = body.size() - 1; i > 0; i--) {
-                    body.get(i).setX(body.get(i - 1).getX());
-                    body.get(i).setY(body.get(i - 1).getY());
-                }
-                body.get(0).setX(body.get(0).getX() - speed);
-                break;
-            case RIGHT:
-                for (int i = body.size() - 1; i > 0; i--) {
-                    body.get(i).setX(body.get(i - 1).getX());
-                    body.get(i).setY(body.get(i - 1).getY());
-                }
-                body.get(0).setX(body.get(0).getX() + speed);
-                break;
-        }
-
     }
     public void move(int mouseX, int mouseY) {
 
@@ -88,7 +44,7 @@ public class Snake {
         // Augmentation linéaire de la vitesse lorsque l'accélération est activée
         if (isAccelerating && body.size()>5 && speed<8) {
             speed++;
-            shrink();
+            restringiPlayer();
         } else if(speed>initialSpeed){
             speed--;
         }
@@ -100,7 +56,7 @@ public class Snake {
         body.addLast(newBodyLast);
     }
 
-    public void shrink(){
+    public void restringiPlayer(){
         if(slow==25) {
             body.removeLast();
             slow=0;
@@ -125,20 +81,6 @@ public class Snake {
         SnakeBodyPart head = body.get(0);
         for (int i=0; i < snakes.size(); i++) {
             if (distance(head.getX(), snakes.get(i).getX(), head.getY(), snakes.get(i).getY())<15) {
-                return true;
-            }
-        }
-        return false;
-    }
-    /**
-     * selfCollision check if the head of the snake in parameter touch any part of the snake
-     * @return true if snake touch head, false if snake don't touch head
-     */
-    public boolean selfCollision(){
-        SnakeBodyPart head = getBody().get(0);
-        for(int i=4;i<body.size();i++){
-            int distance=distance(head.getX(), body.get(i).getX(), head.getY(), body.get(i).getY());
-            if(distance<5) {
                 return true;
             }
         }

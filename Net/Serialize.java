@@ -51,7 +51,7 @@ public class Serialize {
      * */
     public static String serializePlayerSnake(Map.Entry<ClientHandler, Snake> player){
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(player.getKey().getClientUserNamme());
+        stringBuilder.append(player.getKey().getClientUserName());
         stringBuilder.append(",");
         for(int i=0;i<player.getValue().getBody().size()-1;i++){
             stringBuilder.append(player.getValue().getBody().get(i).toString());

@@ -33,7 +33,7 @@ public class Server {
             while (!serverSocket.isClosed()) {
                 Socket socket = serverSocket.accept();
                 ClientHandler clientHandler = new ClientHandler(socket,users);
-                System.out.println("SERVER: New player connected: "+clientHandler.getClientUserNamme());
+                System.out.println("SERVER: New player connected: "+clientHandler.getClientUserName());
                 clientHandlers.add(clientHandler);
                 gameServer.addPlayer(clientHandler,new Snake(startPos(), Direction.RIGHT));
                 Thread thread = new Thread(clientHandler);
