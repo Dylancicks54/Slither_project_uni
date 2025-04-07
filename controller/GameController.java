@@ -1,10 +1,13 @@
 package controller;
 import model.GameState;
-import model.Direction;
 import view.GameViewer.GameView;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
+
+/**
+ * Controller per il gioco single player
+ */
 
 public class GameController extends AbstractGameController implements KeyListener {
 
@@ -20,16 +23,24 @@ public class GameController extends AbstractGameController implements KeyListene
         return this.gameState;
     }
 
+    public GameView getGameView() {
+        return this.gameView;
+    }
+
+    //EVENTI
     @Override
     public void keyTyped(KeyEvent e) {
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
-            if(KeyEvent.VK_SPACE == e.getKeyCode()){
-                gameState.getSnake().setAccelerating(true);
-            }
+        //SPAZIO = ACCELERARE
+        if(KeyEvent.VK_SPACE == e.getKeyCode()){
+            gameState.getSnake().setAccelerating(true);
+        }
 
+        //B = RESETTARE LA PARTITA
+        //@TODO non funziona il resetGame()
         if (KeyEvent.VK_B == e.getKeyCode()) {
              gameState.resetGame();
         }
@@ -50,7 +61,4 @@ public class GameController extends AbstractGameController implements KeyListene
             gameState.getSnake().setMouseY(mouseY);
     }
 
-    public GameView getGv() {
-        return this.gameView;
-    }
 }

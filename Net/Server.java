@@ -1,12 +1,17 @@
 package Net;
 
 import model.Direction;
+import model.Pair;
 import model.Snake;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 
+/**
+ * Classe che gestisce l'avvio del server.
+ * Una volta avviato, parte il loop di gioco, accetta le connessioni di Client e riceve/manda messaggi da/a loro
+ */
 public class Server {
     private final ServerSocket serverSocket;
     private final List<ClientHandler> clientHandlers;
@@ -14,7 +19,8 @@ public class Server {
 
     private final Set<String> users;
     /**
-     * server constructor initialize clientHandlers List and the gameServer class
+     * Costruttore.
+     * Inizializza la lista dei clientHandlers e la classe GameServer
      * @param serverSocket ServerSocket
      */
     public Server(ServerSocket serverSocket) {
@@ -24,18 +30,22 @@ public class Server {
         this.gameServer=new GameServer(this);
     }
     /**
-     * this method start accepting client asking for connection to the server, is a blocking method and should be run on another thread
-     * and creat a ClientHandler for each on a separate thread
+     * Metodo resposabile per accettare le connesione dei client che lo richiedono.
+     * E' un metodo bloccante quindi deve girare su un'altro thread e creare un ClientHandler per ciascun utente in un thread separato
      */
     public void startServer() {
-        System.out.println("SERVER: started\nSERVER: Waiting for connection...");
+        System.out.println("SERVER: avviato\nSERVER: In attesa di connessioni...");
         try {
             while (!serverSocket.isClosed()) {
                 Socket socket = serverSocket.accept();
+
+                //Accetto la connessione, lo aggiungo nell'elenco dei ClientHandler e lo aggiungo nel mondo di gioco
                 ClientHandler clientHandler = new ClientHandler(socket,users);
-                System.out.println("SERVER: New player connected: "+clientHandler.getClientUserName());
+                System.out.println("SERVER: Nuovo giocatore connesso: "+clientHandler.getClientUserName());
                 clientHandlers.add(clientHandler);
-                gameServer.addPlayer(clientHandler,new Snake(startPos(), startPos(),Direction.RIGHT));
+                Pair spawnPoint = getSpawnPoint();
+                gameServer.addPlayer(clientHandler,new Snake(spawnPoint.getX(), spawnPoint.getY(),Direction.RIGHT));
+
                 Thread thread = new Thread(clientHandler);
                 thread.start();
             }
@@ -44,14 +54,23 @@ public class Server {
             closeServerSocket();
         }
     }
+
     /**
-     * set the spawn of the snake point randomly in a 200px radius
+     * Metodo che genere delle coordinate per lo spawn del client
+     * @return coordinate di spawn
      */
-    public int startPos (){
-        Random rand = new Random();
-        return rand.nextInt(1500);
+    public Pair getSpawnPoint(){
+        Random random = new Random();
+
+        int x = random.nextInt(GameServer.getSpawnAreaX());
+        int y = random.nextInt(GameServer.getSpawnAreaY());
+
+        return new Pair(x,y);
     }
 
+    /**
+     * Metodo che chiede il socket lato server
+     */
     public void closeServerSocket() {
         try {
             if (serverSocket != null) {
@@ -62,8 +81,8 @@ public class Server {
         }
     }
     /**
-     * send message to every ClientConnected
-     * @param str String
+     * Metodo che manda un messaggio ad ogni client presente nella lista.
+     * @param str messaggio da inviarte
      */
     public void sendMessage(String str){
         for(ClientHandler clientHandler: clientHandlers){
@@ -71,10 +90,11 @@ public class Server {
         }
     }
     /**
-     * while the server socket is connected update the position trying to maintain a stable 60 ticks
+     * Metodo per l'esecuzione del loop di gioco.
+     * Inotre cerca di mantere 60 tick stabili
      */
     public void respond(){
-        System.out.println("SERVER: game started");
+        System.out.println("SERVER: Partita iniziata");
         while(!serverSocket.isClosed()){
             try { //stable 60 ticks
                 long start = System.currentTimeMillis();
@@ -83,17 +103,20 @@ public class Server {
                 t.join();
                 long finish = System.currentTimeMillis()-start;
 
-                if(finish<17) //1000/60 = aprox 17
+                if(finish<17) //1000/60 = circa 17
                     t.sleep(17-(finish));
             }catch (InterruptedException ignore){
             }
         }
     }
+
     public static void main(String [] args)  {
         try {
             ServerSocket serversocket = new ServerSocket(1234);
             Server server = new Server(serversocket);
+            //Avvio loop di gioco
             new Thread(server::respond).start();
+            //Avvio processo per l'ascolto dei messaggi per il server
             new Thread(server::startServer).start();
         }catch (IOException ignore){}
     }

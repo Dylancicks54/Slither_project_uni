@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * this class handle single client serverside, is responsible to send and receive message to and from the client
- * @author Leonardo Domenicali
+ * Classe che gestisce la comunicazione con un singolo client dal lato del server.
+ * E' responsabile per inviare e ricevere messarri dal client
  */
 
 public class ClientHandler implements Runnable{
@@ -20,13 +20,15 @@ public class ClientHandler implements Runnable{
 
     private String clientUserName;
 
+    //Dove viene conservato il messaggio serializzato della nuova posizione di dove deve andare il client
     private String newPos;
 
     private boolean isAlive;
 
     /**
-     * ClientHandler constructor instantiate a BufferedReader and a BufferedWriter connected to the client through the socket and wait for a username from the client
-     * @param socket Socket connected to the client
+     * Costruttore.
+     * Inizializza un BufferedReader e un BufferedWriter per la comunicazione con il client tramite il socket e resta in attesa di un username dal client.
+     * @param socket il socket connesso al client
      */
     public ClientHandler(Socket socket, Set<String> users) {
         try {
@@ -50,7 +52,7 @@ public class ClientHandler implements Runnable{
         receiveMessage();
     }
     /**
-     * receiveMessage receive message from the client while the socket is connected
+     * Metodo che riceve i messaggi dal client mentre il socket è connesso
      */
     public void receiveMessage(){
         String messageFromClient;
@@ -72,13 +74,17 @@ public class ClientHandler implements Runnable{
         }
     }
 
+    /**
+     * Metdo che gestisce la chiusura del ClientHandler
+     */
     public void close(){
         closeEverything(socket,bufferedWriter,bufferedReader);
     }
 
     /**
+     * Metodo che gestisce l'invio in broadcast di un messaggio (messo in input del metodo) proventiente da un client a tutti gli altri
      * broadcastMessage broadcast a message as parameter from the client to every other client
-     * @param messageToSend String
+     * @param messageToSend messaggio da inoltrare
      */
     public void broadcastMessage(String messageToSend){
         for (ClientHandler clientHandler : clientHandlers){
@@ -95,8 +101,8 @@ public class ClientHandler implements Runnable{
     }
 
     /**
-     * this method write a message from the server to the client connected at this socket
-     * @param mes String message to send
+     * Metodo che gestisce la scrittura di un messaggio dal server al client collegato a questo socket
+     * @param mes messaggio da inviare
      */
     public void write (String mes){
         try {
@@ -107,19 +113,20 @@ public class ClientHandler implements Runnable{
         }
     }
 
-//    /**
-//     * write to all client connected
-//     */
-//    public void writeToAll(String mes){
-//        for(ClientHandler clientHandler: clientHandlers){
-//            clientHandler.write(mes);
-//        }
-//    }
+    /**
+     * Metodo che rimuove un ClientHandler dalla lista dei client attivi
+     */
     public void removeClientHandler(){
         clientHandlers.remove(this);
         broadcastMessage("SERVER: \"" + clientUserName + "\" has left");
     }
 
+    /**
+     * Metodo che gestisce la chiusura di tutte le componenti necessarie per la communicazione con il client
+     * @param socket
+     * @param bufferedWriter
+     * @param bufferedReader
+     */
     public void closeEverything(Socket socket, BufferedWriter bufferedWriter, BufferedReader bufferedReader) {
         removeClientHandler();
         this.isAlive=false;

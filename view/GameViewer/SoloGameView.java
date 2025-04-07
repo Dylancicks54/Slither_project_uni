@@ -3,15 +3,21 @@ package view.GameViewer;
 import controller.GameController;
 import model.AISnake;
 import model.Food;
+import model.GameState;
+import model.Snake;
+
 import java.awt.*;
 import javax.swing.*;
 import java.util.ArrayList;
 import java.util.List;
 public class SoloGameView extends GameView {
     private GameController gc;
+
+    //Dove vengono salvati le immagini degli oggetti di gioco
     private Image[] foodImage;
     private Image snakeImage;
     private Image aisnakeImage;
+
     private JLabel timerLabel;
 
     public SoloGameView() {
@@ -32,10 +38,10 @@ public class SoloGameView extends GameView {
         timerLabel.setForeground(Color.WHITE);
         add(timerLabel);
     }
+
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-        //g.drawImage(background, 0, 0, 1100, 600, this);
 
         //Disegno lo sfondo
         Graphics2D g2d = (Graphics2D) g;
@@ -45,14 +51,6 @@ public class SoloGameView extends GameView {
         int deltaX = getWidth() / 2 - gc.getGameState().getSnake().getBody().get(0).getX();
         int deltaY = getHeight() / 2 - gc.getGameState().getSnake().getBody().get(0).getY();
 
-        //DEBUG
-        //GameView.drawCross(g2d, Color.YELLOW, 3, 110, Toolkit.getDefaultToolkit().getScreenSize().height/2, 20);
-        //GameView.drawCross(g2d,Color.GREEN, 3, deltaX + 100, deltaY + 100, 200);
-        //GameView.drawCross(g2d, Color.YELLOW, 3, getWidth()/2, getHeight()/2, 20);
-        //GameView.drawCross(g2d, Color.GREEN, 3, headX + deltaX, headY + deltaY, 20);
-        //GameView.drawCross(g2d, Color.CYAN, 3, deltaX, deltaY, 20);
-
-
         //Coloro l'area esterna di gioco
         zonaRossa(g2d, deltaX, deltaY);
 
@@ -61,7 +59,7 @@ public class SoloGameView extends GameView {
             int x = gc.getGameState().getSnake().getBody().get(i).getX() + deltaX;
             int y = gc.getGameState().getSnake().getBody().get(i).getY() + deltaY;
 
-            g.drawImage(snakeImage, x, y, 15, 15, this);
+            g.drawImage(snakeImage, x, y, Snake.SEGMENT_SIZE, Snake.SEGMENT_SIZE, this);
         }
 
         //PARTE BOT
@@ -78,7 +76,7 @@ public class SoloGameView extends GameView {
                 int x = snake.getBody().get(i).getX() + deltaX;
                 int y = snake.getBody().get(i).getY() + deltaY;
 
-                g.drawImage(aisnakeImage, x, y, 15, 15, this);
+                g.drawImage(aisnakeImage, x, y, Snake.SEGMENT_SIZE, Snake.SEGMENT_SIZE, this);
             }
         }
 
@@ -88,19 +86,19 @@ public class SoloGameView extends GameView {
         g2d.setColor(Color.RED);
         g2d.setStroke(new BasicStroke(3));
         //BORDO SINISTRA
-        g2d.drawLine(deltaX, deltaY, deltaX, deltaY + 1550);
+        g2d.drawLine(deltaX, deltaY, deltaX, deltaY + GameState.BORDER_Y);
         //BORDO ALTO
-        g2d.drawLine(deltaX, deltaY, deltaX + 1550, deltaY);
+        g2d.drawLine(deltaX, deltaY, deltaX + GameState.BORDER_X, deltaY);
         //BORDO DESTRO
-        g2d.drawLine(deltaX + 1550, deltaY, deltaX + 1550, deltaY + 1550);
+        g2d.drawLine(deltaX + GameState.BORDER_X, deltaY, deltaX + GameState.BORDER_X, deltaY + GameState.BORDER_Y);
         //BORDO BASSO
-        g2d.drawLine(deltaX, deltaY + 1550, deltaX + 1550, deltaY + 1550);
+        g2d.drawLine(deltaX, deltaY + GameState.BORDER_Y, deltaX + GameState.BORDER_X, deltaY + GameState.BORDER_Y);
 
         //Metto il tempo ed il punteggio
-        timerLabel.setText("Time: " + gc.getGameState().getRemainingTime() + "s");
+        timerLabel.setText("Tempo: " + gc.getGameState().getRemainingTime() + "s");
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.PLAIN, 16));
-        g.drawString("Score: " + gc.getGameState().getScore(), 10, 20);
+        g.drawString("Punteggio: " + gc.getGameState().getScore(), 10, 20);
 
         //DISEGNO IL CIBO
         //uso un loop for per risolvere ConcurrentModificationException
@@ -111,6 +109,11 @@ public class SoloGameView extends GameView {
             g.drawImage(foodImage[food.getColore()], x, y, 10, 10, this);
         }
     }
+
+    /**
+     * Metodo per disegnare il background della mappa
+     * @param g2d istanza di Graphics2D
+     */
     private void drawBackground(Graphics2D g2d) {
         Color baseColor = new Color(15, 15, 20);
         Color coloreOttagono = new Color(30, 30, 40);
@@ -133,6 +136,15 @@ public class SoloGameView extends GameView {
             }
         }
     }
+
+    /**
+     * Metodo per disegna un ottagono
+     * @param g2d istanza di Graphics2D
+     * @param x ascissa del punto di partenza
+     * @param y ordinata del punto di partenza
+     * @param size grandezza dell'ottagono
+     * @param color colore dell'ottagono
+     */
     private void disegnaOttagono(Graphics2D g2d, int x, int y, int size, Color color) {
         int s = size / 3;
 
@@ -143,6 +155,12 @@ public class SoloGameView extends GameView {
         g2d.fillPolygon(puntiX, puntiY, 8);
     }
 
+    /**
+     * Metodo per disegnare la zona fuori dalla mappa
+     * @param g2d istanza di Graphics2D
+     * @param deltaX ascissa riferimento mappa
+     * @param deltaY ordinata riferimento mappa
+     */
     private void zonaRossa(Graphics2D g2d, int deltaX, int deltaY) {
         Color zoneColor = new Color(115, 1, 1, 150);
         g2d.setColor(zoneColor);
@@ -177,6 +195,10 @@ public class SoloGameView extends GameView {
         }
     }
 
+    /**
+     * Metodo per disegnare la minimappa
+     * @param g2d istanza di Graphics2D
+     */
     public void drawMiniMap(Graphics2D g2d) {
         int size = 150;
         int spazio = 20;
@@ -214,36 +236,42 @@ public class SoloGameView extends GameView {
         g2d.fillOval(centroX - raggio + playerX - 5, centroY - raggio + playerY - 5, 10, 10);
     }
 
-
+    /**
+     * Metodo per aggiornare il timer di gioco
+     */
     public void updateTimerLabel() {
         if(!(timerLabel==null))
-            timerLabel.setText("Time: " + gc.getGameState().getRemainingTime() + "s");
+            timerLabel.setText("Tempo: " + gc.getGameState().getRemainingTime() + "s");
         repaint();
     }
+
     public GameController getGc() {
         return gc;
     }
 
+    /**
+     * Metodo per mostrare il messaggio allo scadere del tempo
+     */
     public void showTimeUpDialog() {
         String winningMessage = "";
 
-        // Find the highest AI score
+        // Trovo il bot con il punteggio più alto
         int highestAIScore = Integer.MIN_VALUE;
         for (AISnake aiSnake : getGc().getGameState().getAiSnakes()) {
-            // The AI snake's score is based on its body size, subtracting 5 as in the original logic
+            // Il punteggio è basato sulla lungezza dello snake, sottraendo 5 perchè è la lunghezza iniziale
             int aiScore = aiSnake.getBody().size() - 5;
             highestAIScore = Math.max(highestAIScore, aiScore);
         }
 
-        // Compare player's score with the highest AI score
+        // Confronto il punteggio del giocatore con quello del bot col punteggio più alto
         if (getGc().getGameState().getScore() > highestAIScore) {
-            winningMessage = "You won! Your score is: " + getGc().getGameState().getScore();
+            winningMessage = "Hai vinto! Il tuo punteggio è: " + getGc().getGameState().getScore();
         } else {
-            winningMessage = "You lost! Your score is " + getGc().getGameState().getScore() +
-                    " but the highest AI score is: " + highestAIScore;
+            winningMessage = "Hai perso! Il tuo punteggio è " + getGc().getGameState().getScore() +
+                    " ma il bot col punteggio più alto è: " + highestAIScore;
         }
 
-        // Show the result dialog
+        // Mostro il messaggio con l'esito
         JOptionPane.showMessageDialog(this, winningMessage);
     }
 

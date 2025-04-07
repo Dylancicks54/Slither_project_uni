@@ -1,10 +1,9 @@
 package model;
 /**
- * interface to uniform pair and food together for serialization and snake class method
+ * Interfaccia per uniformare Pair e Food insieme per la serializzazione e per i metodi di Snake
  */
 public interface Point {
-    /**
-     * interface to uniform pair and food together*/
+
     public int getX();
     public int getY();
     @Override

@@ -1,103 +1,138 @@
 package model;
 
 import controller.GameController;
-import view.GameWindow;
 
-import java.awt.*;
 import java.util.*;
 import java.util.List;
 import java.util.Timer;
+
+/**
+ * Modello che gestisce la logica della partita
+ */
 public class GameState {
     private Snake snake;
+    private GameController controller;
+
+    //Elenco elementi di gioco
     private List<AISnake> aiSnakes;
     private List<AISnake> snakes;
+    private ArrayList<Food> foods;
+
+    //Timer per l'esecuzione dei thread dei vari processi della partita
     private Timer gameTimer;
     private Timer foodTimer;
-    private ArrayList<Food> foods;
-    private GameController controller;
-    private Timer countdownTimer;  // Nouveau chronomètre pour le mode solo
+    private Timer countdownTimer;
+
+    //Contatori
     private int remainingTime;
-    private int countdownSeconds;
+    //private int countdownSeconds;
     private int score;
-    private static final double ATTRACT_DISTANCE = 50.0;
-    private static final double ATTRACT_SPEED = 2.0;
+
+    //@TODO valutare se tenere il magnetize visto che non funziona
+    //Costanti
+    private static final int ATTRACT_DISTANCE = 50;
+    private static final int ATTRACT_SPEED = 2;
+
+    public static final int BORDER_X = 1550;
+    public static final int BORDER_Y = 1550;
+    public static final int OFFSET_MAP_X = 50;
+    public static final int OFFSET_MAP_Y = 50;
+    private static final int MATCH_DURATION = 60;
+    private static final int MAX_NUMBER_FOOD = 100;
+    private static final int MAX_NUMBER_BOT = 5;
 
     public GameState(GameController controller){
+        this.controller=controller;
 
-        Random random = new Random();
-        this.snake =new Snake(random.nextInt(1500), random.nextInt(1500), Direction.RIGHT);
+        //Inizializzo i contatori
         this.score = 0;
+        //@TODO non ho capito perchè si moltiplica per 40 e poi nel getter si divide per 40 per essere mostrato a video...
+        this.remainingTime = MATCH_DURATION * 40;
+
+        //Inizializzo i timer
         this.gameTimer=new Timer();
         this.foodTimer=new Timer();
-        this.countdownSeconds = 60;
-        this.remainingTime = countdownSeconds *40;
         this.countdownTimer = new Timer();
+
+        //Inizializzo gli elenchi
         this.foods = new ArrayList<>();
-        this.controller=controller;
         this.aiSnakes=new ArrayList<>();
 
+        //Spawno in posti randomici gli oggetti di gioco
+        Random random = new Random();
+        this.snake =new Snake(random.nextInt(getSpawnAreaX()), random.nextInt(getSpawnAreaY()), Direction.RIGHT);
 
+        for (int i = 0; i < MAX_NUMBER_FOOD; i++) {
+            generateFood(getSpawnAreaX(),getSpawnAreaY());
+        }
+        for (int i = 0; i < MAX_NUMBER_BOT; i++) {
+            aiSnakes.add(new AISnake(random.nextInt(getSpawnAreaX()), random.nextInt(getSpawnAreaX()),Direction.DOWN, foods));
+        }
 
-            for (int i = 0; i < 100; i++) {
-                generateFood(1500,1500);
-            }
-            for (int i = 0; i < 5; i++) {
-                aiSnakes.add(new AISnake(random.nextInt(1500), random.nextInt(1500),Direction.DOWN, foods));
-            }
-
+        //Inizio il loop di gioco
         gameStart();
     }
 
+    /**
+     * Metodo che inizia il loop di gioco.
+     * Il metodo esegue 3 thread "in parallelo" che sono responsabili per:
+     * - la logica di gioco (collissione tra oggetti di gioco)
+     * - gestione della durata della partita
+     * - respawn del cibo
+     */
     public void gameStart() {
+        //THREAD CON LA LOGICA DI GIOCO
         gameTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                // Muove il player e i bot
+                //Muovo il player
                 snake.move(snake.getMouseX(), snake.getMouseY());
+
+                //Muovo i bot
+                //Lavoro su una copia di foods per evitare il problema della concorrenza
                 for (AISnake aiSnake : aiSnakes) {
                     aiSnake.moveAI((ArrayList<Food>) foods.clone());
                 }
 
-                // Applica l'effetto magnete e controlla il cibo
-                applyMagnetEffect();
+                // Controlla le collisioni:
+                // 1. Collisioni con il cibo
                 checkFoodCollision();
 
-                // Controlla le collisioni:
-                // 1. Se la testa del player collide con un segmento di un bot, termina il gioco
+                // 2. Se la testa del player collide con un segmento di un bot, termina il gioco
                 if (checkPlayerCollisionWithBots()) {
                     gameTimer.cancel();
                     foodTimer.cancel();
                     countdownTimer.cancel();
-                    controller.getGv().showLoseDialog();
+                    controller.getGameView().showLoseDialog();
                     Timer returnToMenuTimer = new Timer();
                     returnToMenuTimer.schedule(new TimerTask() {
                         @Override
                         public void run() {
-                            controller.getGv().showMenu();
-                            controller.getGv().closeCurrentGameWindow();
+                            controller.getGameView().showMenu();
+                            controller.getGameView().closeCurrentGameWindow();
                         }
                     }, 1000);
                     return;
                 }
 
-                // 2. Se la testa di un bot collide con un segmento del player, quel bot "muore" (viene respawnato)
+                // 3. Se la testa di un bot collide con un segmento del player, quel bot "muore" (viene respawnato)
                 checkBotCollisionWithPlayer();
 
-                // 3. Se due bot collidono tra loro, il bot coinvolto viene respawnato
+                // 4. Se due bot collidono tra loro, il bot coinvolto viene respawnato
                 checkAIBotCollisions();
 
-                // Controlla i bordi del campo
+                // 5. Controllo se si scontra con i bordi della mappa
                 if (checkBodyCollision()) {
                     gameTimer.cancel();
                     foodTimer.cancel();
                     countdownTimer.cancel();
-                    controller.getGv().showLoseDialog();
+                    controller.getGameView().showLoseDialog();
                     Timer returnToMenuTimer = new Timer();
                     returnToMenuTimer.schedule(new TimerTask() {
                         @Override
                         public void run() {
-                            controller.getGv().showMenu();
-                            controller.getGv().closeCurrentGameWindow();
+                            controller.getGameView().showMenu();
+                            controller.getGameView().closeCurrentGameWindow();
                         }
                     }, 1000);
                     return;
@@ -105,50 +140,62 @@ public class GameState {
             }
         }, 0, 25);  // Aggiorna ogni 25ms
 
+        //THREAD TIMER DELLA PARTITA
         countdownTimer.schedule(new TimerTask() {
             @Override
             public void run() {
                 remainingTime--;
+                //Quando il tempo è scaduto, la partita finisce
                 if (remainingTime <= 0) {
                     gameTimer.cancel();
                     foodTimer.cancel();
                     countdownTimer.cancel();
-                    controller.getGv().showTimeUpDialog();
+                    controller.getGameView().showTimeUpDialog();
                     Timer returnToMenuTimer = new Timer();
                     returnToMenuTimer.schedule(new TimerTask() {
                         @Override
                         public void run() {
-                            controller.getGv().showMenu();
-                            controller.getGv().closeCurrentGameWindow();
+                            controller.getGameView().showMenu();
+                            controller.getGameView().closeCurrentGameWindow();
                         }
                     }, 1000);
                 } else {
-                    controller.getGv().updateTimerLabel();
+                    controller.getGameView().updateTimerLabel();
                 }
             }
         }, 0, 25);
 
+        //THREAD SPAWN CIBO
         foodTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                generateFood(1500, 1500);
+                generateFood(getSpawnAreaX(), getSpawnAreaY());
             }
         }, 0, 200);
     }
 
-
-
-    public void generateFood(int a,int b) {
+    /**
+     * Metodo per lo spawn del cibo.
+     * Il cibo viene generato in una coordinata causale, associato un colore casuale ed inserito nell'elenco dei cibi
+     * @param mapX ascissa massima dove il cibo può comparire
+     * @param mapY ordinata massima dove il cibo può comparire
+     */
+    public void generateFood(int mapX,int mapY) {
         Random random = new Random();
-        int x = random.nextInt(a);
-        int y = random.nextInt(b);
-        Color color = Color.RED; // Couleur de la nourriture
-        int size = 10; // Taille de la nourriture
-        // Générer un nombre aléatoire entre 0 (inclus) et 4 (exclus)
+
+        int x = random.nextInt(mapX);
+        int y = random.nextInt(mapY);
+        // Prendo un numero causale tra 1 e 4 (escluso)
         int randomNumber = random.nextInt(4);
-        Food food = new Food(x, y, randomNumber, size);
+
+        Food food = new Food(x, y, randomNumber);
         foods.add(food);
     }
+
+    /**
+     * Metodo che gestisce la collisione con il cibo.
+     * Quando uno snake (player o bot) "cattura" un cibo, aumenta la sua lunghezza ed aumenta anche il suo punteggio.
+     */
     public void checkFoodCollision() {
         for (int i = foods.size() - 1; i >= 0; i--) {  // Iteriamo dalla fine per evitare l'errore di IndexOutOfBounds
             Food food = foods.get(i);
@@ -171,82 +218,42 @@ public class GameState {
         }
     }
 
+    /**
+     * Metodo che controlla la collisione del player contro il bordo della mappa.
+     * Se il player si scontra con esso, muore.
+     * @return true se ha toccato il bordo, false in tutti gli altri casi
+     */
     public boolean checkBodyCollision(){
-        return snake.getBody().get(0).getX() <= 0 || snake.getBody().get(0).getX() >= (1550 - 15) || snake.getBody().get(0).getY() >= (1550-15) || snake.getBody().get(0).getY() <= 0;
+        //Correzione perchè il riferimento sulla vista non è al centro della testa
+        //ma è nell'angolo in alto a sinistra del quadrato che inscrive la circonferenza.
+        //Quindi per il lato destro e basso devo considerare anche la grandezza del pallino che costituisce il corpo dello snake
+
+        return snake.getBody().get(0).getX() <= (0 - Snake.SEGMENT_SIZE) || //LATO SINISTRO
+                snake.getBody().get(0).getX() >= (BORDER_X - Snake.SEGMENT_SIZE) || //lATO DESTRO
+                snake.getBody().get(0).getY() >= (BORDER_Y - Snake.SEGMENT_SIZE) || //LATO BASSO
+                snake.getBody().get(0).getY() <= (0 - Snake.SEGMENT_SIZE); //LATO ALTO
     }
 
-    private void applyMagnetEffect() {
-        List<Food> foodToRemove = new ArrayList<>();
-        List<Food> foodsCopy;
-
-        // Creiamo una copia della lista foods per evitare modifiche concorrenti
-        synchronized (foods) {
-            foodsCopy = new ArrayList<>(foods);
-        }
-
-        for (Food food : foodsCopy) {
-            Snake closestSnake = null;
-            double closestDistance = ATTRACT_DISTANCE;
-
-            // Controlliamo i giocatori
-            double distance1 = Snake.distance(snake.getBody().getFirst().getX(), snake.getBody().getFirst().getY(), food.getX(), food.getY());
-            if (distance1 < closestDistance) {
-                closestDistance = distance1;
-                closestSnake = snake;
-            }
-
-            // Controlliamo i bot
-            for (AISnake aiSnake : aiSnakes) {
-                double distance2 = Snake.distance(aiSnake.getBody().getFirst().getX(), aiSnake.getBody().getFirst().getY(), food.getX(), food.getY());
-                if (distance2 < closestDistance) {
-                    closestDistance = distance2;
-                    closestSnake = aiSnake;
-                }
-            }
-
-            // Se abbiamo trovato un serpente vicino al cibo
-            if (closestSnake != null) {
-                if (closestSnake.collisionsWithFood(food)) {
-                    closestSnake.grow();  // Il metodo grow() dovrebbe esistere sia in Snake che in AISnake
-                    foodToRemove.add(food);
-                } else {
-                    moveFoodTowards(food, closestSnake);
-                }
-            }
-        }
-
-        // Rimuoviamo il cibo mangiato in modo sincronizzato
-        synchronized (foods) {
-            foods.removeAll(foodToRemove);
-        }
-    }
-
-    private void moveFoodTowards(Food food, Snake snake) {
-        int foodPosX = food.getX();
-        int foodPosY = food.getY();
-
-        double dx = snake.getBody().getFirst().getX() - foodPosX;
-        double dy = snake.getBody().getFirst().getY() - foodPosY;
-        double distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance > 0) {
-            int moveX = (int)((dx / distance) * ATTRACT_SPEED);
-            int moveY = (int)((dy / distance) * ATTRACT_SPEED);
-            food.setX(foodPosX + moveX);
-            food.setY(foodPosY + moveY);
-        }
-    }
-    // Se la testa del giocatore collide con un segmento di un bot, restituisce true
+    /**
+     * Metodo che gestisce la collisione del giocatore con un bot.
+     *
+     * Quando avviene l'urto, il player muore ed al suo posto compare del cibo.
+     *
+     * @return true se il player colpisce il corpo di un bot, false in tutti gli altri casi
+     */
     public boolean checkPlayerCollisionWithBots() {
-        int threshold = 10; // Soglia in pixel (modifica in base alla dimensione dei segmenti)
+        int threshold = Snake.SEGMENT_SIZE;
+
         int playerX = snake.getBody().get(0).getX();
         int playerY = snake.getBody().get(0).getY();
+
         for (AISnake aiSnake : aiSnakes) {
-            for (Object segmentObj : aiSnake.getBody()) {
-                SnakeBodyPart segment = (SnakeBodyPart) segmentObj;
+            for (SnakeBodyPart segment : aiSnake.getBody()) {
                 int segX = segment.getX();
                 int segY = segment.getY();
+                //Controllo collisione
                 if (Math.abs(playerX - segX) < threshold && Math.abs(playerY - segY) < threshold) {
+                    //Se si scontra, lo snake viene sostituico con del cibo
                     generateFoodFromSnake(snake);
                     return true;
                 }
@@ -256,10 +263,15 @@ public class GameState {
     }
 
 
-
-    // Se la testa di un bot collide con un segmento del giocatore, il bot viene respawnato
+    /**
+     * Metodo che gestisce la collisione del bot con il giocatore.
+     *
+     * Quando avviene l'urto, il bot muore ed al suo posto compare del cibo.
+     *
+     * Inoltre, il bot viene prontamente sostituito con uno nuovo
+     */
     public void checkBotCollisionWithPlayer() {
-        int threshold = 10;
+        int threshold = Snake.SEGMENT_SIZE;
         List<AISnake> botsToRespawn = new ArrayList<>();
 
         // Itera su una copia della lista per evitare la ConcurrentModificationException
@@ -270,6 +282,7 @@ public class GameState {
                 SnakeBodyPart segment = (SnakeBodyPart) segmentObj;
                 int segX = segment.getX();
                 int segY = segment.getY();
+                //Controllo collisione
                 if (Math.abs(botHeadX - segX) < threshold && Math.abs(botHeadY - segY) < threshold) {
                     botsToRespawn.add(aiSnake);
                     generateFoodFromSnake(aiSnake);
@@ -286,12 +299,13 @@ public class GameState {
         }
     }
 
-
-
-
-    // Se due bot collidono tra loro, quello la cui testa tocca un segmento dell'altro viene respawnato
+    /**
+     * Metodo che gestisce la collisione tra bot.
+     * Quando avviene l'urto (testa di uno con il corpo dell'altro), quello che ha colpito con la testa muore e spawna cibo
+     *
+     */
     public void checkAIBotCollisions() {
-        int threshold = 10;
+        int threshold = Snake.SEGMENT_SIZE;
         List<AISnake> botsToRespawn = new ArrayList<>();
         for (int i = 0; i < aiSnakes.size(); i++) {
             AISnake botA = aiSnakes.get(i);
@@ -302,10 +316,10 @@ public class GameState {
                 int botBHeadX = botB.getBody().get(0).getX();
                 int botBHeadY = botB.getBody().get(0).getY();
                 // Verifica se la testa di botA colpisce un segmento di botB
-                for (Object segmentObj : botB.getBody()) {
-                    SnakeBodyPart segment = (SnakeBodyPart) segmentObj;
-                    int segX = segment.getX();
-                    int segY = segment.getY();
+                for (SnakeBodyPart segmentB : botB.getBody()) {
+                    int segX = segmentB.getX();
+                    int segY = segmentB.getY();
+                    //Controllo collisione
                     if (Math.abs(botAHeadX - segX) < threshold && Math.abs(botAHeadY - segY) < threshold) {
                         if (!botsToRespawn.contains(botA)) {
                             botsToRespawn.add(botA);
@@ -314,10 +328,10 @@ public class GameState {
                     }
                 }
                 // Verifica se la testa di botB colpisce un segmento di botA
-                for (Object segmentObj : botA.getBody()) {
-                    SnakeBodyPart segment = (SnakeBodyPart) segmentObj;
-                    int segX = segment.getX();
-                    int segY = segment.getY();
+                for (SnakeBodyPart segmentA : botA.getBody()) {
+
+                    int segX = segmentA.getX();
+                    int segY = segmentA.getY();
                     if (Math.abs(botBHeadX - segX) < threshold && Math.abs(botBHeadY - segY) < threshold) {
                         if (!botsToRespawn.contains(botB)) {
                             botsToRespawn.add(botB);
@@ -335,26 +349,28 @@ public class GameState {
         }
     }
 
+    /**
+     * Metodo che gestisce il respawn dei bot.
+     * I bot vengono respownati in una posizione casuale dentro l'area di gioco
+     * @return AISnake l'istanza di bot da inserire nel mondo di gioco
+     */
     private AISnake spawnAISnake() {
-        int botWidth = 20; // dimensione stimata del bot
-        int windowWidth = GameWindow.getWindowWidth();
-        int windowHeight = GameWindow.getWindowHeight();
         Random random = new Random();
 
         int spawnX, spawnY;
         boolean validPosition;
 
         do {
-            spawnX = random.nextInt(windowWidth - botWidth);
-            spawnY = random.nextInt(windowHeight - botWidth);
+            spawnX = random.nextInt(getSpawnAreaX());
+            spawnY = random.nextInt(getSpawnAreaY());
             validPosition = true;
 
-            // Controllo collisione con il giocatore
+            // Controllo se la posizione nuova collisione con il giocatore
             if (checkCollisionWithSnake(snake, spawnX, spawnY)) {
                 validPosition = false;
             }
 
-            // Controllo collisione con altri bot
+            // Controllo se la posizione nuova collisione con altri bot
             for (AISnake aiSnake : aiSnakes) {
                 if (checkCollisionWithSnake(aiSnake, spawnX, spawnY)) {
                     validPosition = false;
@@ -367,37 +383,61 @@ public class GameState {
         return new AISnake(spawnX, spawnY,Direction.DOWN, foods);
     }
 
-    // Metodo helper per controllare se una posizione collide con un serpente
+    /**
+     * Metodo helper per controllare se le coordinate in input (x,y) fanno parte di uno snake
+     * @param snake Snake preso in cosiderazione
+     * @param x ascissa in esame
+     * @param y ordinata in esame
+     * @return true se le coordinate fanno parte dello snake, false tin tutti gli altri casi
+     */
     private boolean checkCollisionWithSnake(Snake snake, int x, int y) {
         for (SnakeBodyPart part : snake.getBody()) {
-            if (Math.abs(part.getX() - x) < 20 && Math.abs(part.getY() - y) < 20) {
+            if (Math.abs(part.getX() - x) < Snake.SEGMENT_SIZE && Math.abs(part.getY() - y) < Snake.SEGMENT_SIZE) {
                 return true; // Collisione trovata
             }
         }
         return false; // Nessuna collisione
     }
 
-
+    /**
+     * Metodo per la generazione di cibo alla morte di uno snake
+     * @param snake snake da scomporre in cibo
+     */
     private void generateFoodFromSnake(Snake snake) {
         for (SnakeBodyPart part : snake.getBody()) {
             int x = part.getX();
             int y = part.getY();
             int foodType = new Random().nextInt(4); // Scegliamo un tipo di cibo casuale
-            int size = 10;
-            foods.add(new Food(x, y, foodType, size));
+            foods.add(new Food(x, y, foodType));
         }
     }
 
+    /**
+     * Restitusce la lunghezza dell'area di gioco
+     */
+    public static int getSpawnAreaX(){
+        return BORDER_X - OFFSET_MAP_X;
+    }
 
+    /**
+     * Restituisce l'altrezza dell'area di gioco
+     * @return
+     */
+    public static int getSpawnAreaY(){
+        return BORDER_Y - OFFSET_MAP_Y;
+    }
 
-
-
+    /**
+     * Metodo che gestisce la chiusura della sessione di gioco.
+     * Chiude tutti i timer ed apre il menu della prelobby
+     */
     public void resetGame() {
         gameTimer.cancel();
         foodTimer.cancel();
         countdownTimer.cancel();
 
-        controller.getGv().showMenu();  // Affiche le menu après avoir réinitialisé le jeu
+        //Faccio comparire il menu
+        controller.getGameView().showMenu();
     }
 
     public ArrayList<Food> getFoods(){
@@ -410,6 +450,7 @@ public class GameState {
         return aiSnakes;
     }
 
+    //@TODO si può riuscire a togliere/gestire questo /40 perchè non so come giustificarlo
     public int getRemainingTime() {
         return (int)remainingTime/40;
     }

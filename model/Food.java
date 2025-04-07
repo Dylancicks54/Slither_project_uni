@@ -1,16 +1,23 @@
 package model;
 
+/**
+ * Classe con la gestione logica del cibo
+ */
 public class Food implements Point{
+
     private int x;
     private int y;
+    //Il colore è un numero tra 1 e 4 e viene usato per prendere uno dei diversi PNG del cibo
     private int colore;
-    private int size;
-    public Food(int x,int y,int color, int size){
+
+    public final static int SIZE = 10;
+
+    public Food(int x,int y,int color){
         this.x = x;
         this.y = y;
         this.colore = color;
-        this.size = size;
     }
+
     public int getX() {
         return x;
     }
@@ -26,15 +33,11 @@ public class Food implements Point{
     public int getColore() {
         return colore;
     }
+
     public void setColore(int colore) {
         this.colore = colore;
     }
-    public int getSize() {
-        return size;
-    }
-    public void setSize(int size) {
-        this.size = size;
-    }
+
     @Override
     public String toString(){
         return x+":"+y;

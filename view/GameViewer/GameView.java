@@ -2,29 +2,35 @@ package view.GameViewer;
 import view.ShowPreLobby;
 import javax.swing.*;
 import java.awt.*;
-/**abstract class to diversify every gameView depending on the game mod*/
+/**
+ * Classe astratta per riportare i metodi in comuni che le viste delle varie modalità devono avere in comune
+ * */
 public abstract class GameView extends JPanel{
     /**
-     * main method to render images on the game window
+     * Motodo per visualizzare immagini sulla finestra di gioco
      */
     @Override
     public void paintComponent(Graphics g) {
     }
-    /**update the timer liable*/
-    public abstract void updateTimerLabel();
+
     /**
-     * show the main menu closing the gameWindow
+     * Metodo per aggiornare il timer di gioco
+     */
+    public abstract void updateTimerLabel();
+
+    /**
+     * Metodo per mostrare il menù principale quando si chiude la finestra di gioco
      */
     public void showMenu() {
         SwingUtilities.invokeLater(() -> {
-            new ShowPreLobby();
+            new ShowPreLobby().setVisible(true);
             closeCurrentGameWindow();
         });
     }
 
     /**
-     * close the current game window
-     * */
+     * Metodo per chiudere la finestra di gioco correntemente aperta
+     */
     public void closeCurrentGameWindow() {
         Window window = SwingUtilities.getWindowAncestor(this);
         if (window != null) {
@@ -32,26 +38,18 @@ public abstract class GameView extends JPanel{
         }
     }
 
-    public void showWinnerDialogVSAI(int s) {
-        if(s==1){
-            JOptionPane.showMessageDialog(this, "You won the game!", "Game Over", JOptionPane.INFORMATION_MESSAGE);
-        }else{
-            JOptionPane.showMessageDialog(this, "The AI won the game!", "Game Over", JOptionPane.INFORMATION_MESSAGE);
-        }
-    }
+    /**
+     * Metodo che mostra un messaggio a video quando il tempo è finito
+     */
     public void showTimeUpDialog() {
-        JOptionPane.showMessageDialog(this, "Time's up!", "Game Over", JOptionPane.INFORMATION_MESSAGE);
-    }
-    public void showLoseDialog() {
-        JOptionPane.showMessageDialog(this, "You lost!", "Game Over", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Tempo scaduto!", "Game Over", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    public static void drawCross(Graphics2D g2d, Color color, int strokeWidth, int x, int y, int sizeCross){
-        g2d.setColor(color);
-        g2d.setStroke(new BasicStroke(strokeWidth));
-        int hSize = sizeCross/2;
-        g2d.drawLine(x - hSize, y, x + hSize, y);
-        g2d.drawLine(x, y - hSize, x, y + hSize);
+    /**
+     * Metodo che mostra un messaggio a video quando si perde
+     */
+    public void showLoseDialog() {
+        JOptionPane.showMessageDialog(this, "Hai perso!", "Game Over", JOptionPane.INFORMATION_MESSAGE);
     }
 
 }

@@ -4,7 +4,7 @@ import view.ConnectionMenu;
 import java.io.*;
 import java.net.Socket;
 /**
- * This class handle communication with the server is connected to
+ * Classe che gestisce la comunicazione con il server a cui il client è connesso
  */
 public class Client {
 
@@ -12,28 +12,34 @@ public class Client {
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
     private String userName;
+
+    //Dove vengo conservati gli oggetti di gioco serializzati
     private String snakes;
     private String foods;
+
+    //Dove viene conservato il messaggio da deserializzare dal server
     private String messageFromServer;
+
     /**
-     * Client constructor create a client object, initialize a BufferedReader and a BufferedWriter writing and reading from and to the server connected to the socket
-     * @param socket Socket object connected to the server
-     * @param userName String containing the username of the client
+     * Costruttore.
+     * Crea un istanza di Client, inizializza un BufferedReader e un BufferedWriter per I/O con il server collegato al socket
+     * @param socket istanza di Socket connessa al server
+     * @param userName stringa contentente l'username del client
      */
     public Client (Socket socket,String userName){
-        System.out.println("Trying to connect...");
+        System.out.println("Tentativo di connessione...");
         try{
             this.socket = socket;
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.userName=userName;
-            System.out.println("Connected to server "+socket.getInetAddress());
+            System.out.println("Connesso al server "+socket.getInetAddress());
         }catch (IOException e){
             closeEverything( socket, bufferedWriter, bufferedReader);
         }
     }
     /**
-     * sendMessage send the username as String to the server confirming connection
+     * Metodo che per consolidare la connessione con il server.
      */
     public void confirmConnection(){
         try{
@@ -45,8 +51,10 @@ public class Client {
         }
     }
     /**
-     * write send the parameter string to the server with a specific structure
-     * @param message String containing the message to send to the server
+     * Metodo che gestisce l'invio dei messaggi al server.
+     * La struttura del messaggio deve essere la seguente: <USERNAME>-<CORPO_MESSAGGIO>.
+     * Il corpo del messaggio contiene gli snake ed i cibi serializzati divisi da un "&".
+     * @param message stringa che va inserita nel corpo del messaggio
      */
     public void write(String message){
         if (socket.isConnected()){
@@ -58,11 +66,11 @@ public class Client {
 
             }
         }else {
-            System.out.println("server disconnected");
+            System.out.println("Server disconnesso");
         }
     }
     /**
-     * closeEverything close all server related class
+     * Metodo che chiude tutte le strutture create per la comunicazione con il server
      */
     public void closeEverything(Socket socket, BufferedWriter bufferedWriter, BufferedReader bufferedReader) {
         try {
@@ -77,20 +85,25 @@ public class Client {
         }
     }
     /**
-     * listenForMessage read messages from server while the socket is connected everytime they get sent, it's a blocking method and need to run on a separate thread to not stop the main program
+     * Metodo che legge i messaggi in arrivo dal server mentre il socket è attivo.
+     * E' un metodo bloccante e quindi è necessario eseguire questo precesso su un thread separato per evitare di fermare il programma principale
      */
     public void listenForMessage(){
 
         while (socket.isConnected()){
             try {
                 messageFromServer=bufferedReader.readLine();
-                System.out.println(messageFromServer); //uncomment for debug
-                if(messageFromServer.contains("SERVER")){//skip server sent message for debug and special action like death or connection/disconnection of player
+                //DEBUG
+                System.out.println(messageFromServer);
+
+                //Se ricevo il messaggio di morte del player, chiudo l'esecuzione
+                if(messageFromServer.contains("SERVER")){
                     System.out.println(messageFromServer);
                     if(messageFromServer.contains("SERVER: you died!"))
                         close();
                     continue;
                 }
+
                 snakes=messageFromServer.split("&")[0];
                 //System.out.println(snakes);
                 foods=messageFromServer.split("&")[1];
@@ -100,6 +113,10 @@ public class Client {
             }
         }
     }
+
+    /**
+     * Metodo per la chiusura del client
+     */
     public void close(){
         System.out.println("SERVER: bye!");
         closeEverything(socket,bufferedWriter,bufferedReader);

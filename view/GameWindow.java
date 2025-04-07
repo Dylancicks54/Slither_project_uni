@@ -7,9 +7,15 @@ import javax.swing.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
-
+/**
+ * Vista generica che gestisce entrambe le modalità di gioco
+ */
 public class GameWindow extends JFrame {
 
+    /**
+     * Costruttore per la modalità multiplayer
+     * @param client
+     */
     public GameWindow (Client client){
         setTitle("Slither.io");
         setSize(getWindowWidth(),getWindowHeight());
@@ -23,7 +29,7 @@ public class GameWindow extends JFrame {
         setVisible(true);
 
         addWindowListener(new WindowAdapter()
-{
+        {
             @Override
             public void windowClosing(WindowEvent e)
             {
@@ -34,6 +40,10 @@ public class GameWindow extends JFrame {
 
         });
     }
+
+    /**
+     * Costruttore per la modalità singleplayer
+     */
     public GameWindow(){
 
         setTitle("Slither.io");
@@ -51,6 +61,7 @@ public class GameWindow extends JFrame {
         setVisible(true);
 
     }
+
     public static int  getWindowWidth(){
         return  1100;
     }

@@ -9,7 +9,6 @@ public class ShowPreLobby extends JFrame {
     private ImageIcon background;
     private Image backgroundImage;
 
-    // Altri campi se necessari...
 
     public ShowPreLobby() {
         // Configurazione della finestra (this)

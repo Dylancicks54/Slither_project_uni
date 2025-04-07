@@ -11,19 +11,23 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 
+/**
+ * Vista per la connessione del client al server
+ */
 public class ConnectionMenu extends JFrame {
     private Client client;
 
     public ConnectionMenu() {
+
         setTitle("Slither.io Menu");
-        setSize(1100, 600);
+        setSize(GameWindow.getWindowWidth(), GameWindow.getWindowHeight());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
         setLayout(null);
 
         // Dimensioni della finestra
-        int frameWidth = 1100;
-        int frameHeight = 600;
+        int frameWidth = GameWindow.getWindowWidth();
+        int frameHeight = GameWindow.getWindowHeight();
 
         // Carica e scala l'immagine di background
         ImageIcon backgroundImageIcon = new ImageIcon("resources/background_menu.jpg");
