@@ -1,7 +1,6 @@
 package Net;
 
-import model.Pair;
-import model.Snake;
+import model.*;
 import java.util.*;
 /**
  * Classe di supporto per la serializzazione e deserializzazione dei messaggi in entrata ed in uscita dal server

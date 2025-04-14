@@ -1,8 +1,6 @@
 package Net;
 
-import model.Direction;
-import model.Pair;
-import model.Snake;
+import model.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -66,6 +64,13 @@ public class Server {
         int y = random.nextInt(GameServer.getSpawnAreaY());
 
         return new Pair(x,y);
+    }
+    /**
+     * Rimuove un utente dal set dei nomi
+     * @param userName nome utente da rimuovere
+     */
+    public void removeUser(String userName) {
+        users.remove(userName);
     }
 
     /**

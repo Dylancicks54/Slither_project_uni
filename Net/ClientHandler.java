@@ -11,67 +11,101 @@ import java.util.Set;
  * E' responsabile per inviare e ricevere messarri dal client
  */
 
-public class ClientHandler implements Runnable{
+public class ClientHandler implements Runnable {
     public static List<ClientHandler> clientHandlers = new ArrayList<>();
 
     private Socket socket;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
-
+    private String lastMove;
     private String clientUserName;
 
     //Dove viene conservato il messaggio serializzato della nuova posizione di dove deve andare il client
     private String newPos;
 
     private boolean isAlive;
+    private boolean isBoosting = false;
+
 
     /**
      * Costruttore.
      * Inizializza un BufferedReader e un BufferedWriter per la comunicazione con il client tramite il socket e resta in attesa di un username dal client.
+     *
      * @param socket il socket connesso al client
      */
     public ClientHandler(Socket socket, Set<String> users) {
         try {
-            this.isAlive=true;
+            this.isAlive = true;
             this.socket = socket;
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            this.clientUserName = bufferedReader.readLine();
-            while (users.contains(this.clientUserName)){
-                this.clientUserName +=1;
+
+            // Salviamo il nome originale inviato dal client
+            String originalName = bufferedReader.readLine();
+            String newName = originalName;
+            int counter = 1;
+            // Controllo se il nome è già in uso
+            while (users.contains(newName)) {
+                newName = originalName + counter;
+                counter++;
             }
+            // Imposto il nome definitivo (che potrebbe essere uguale all'originale o modificato)
+            this.clientUserName = newName;
             clientHandlers.add(this);
-            users.add(this.clientUserName);
-        }catch (IOException e){
-            closeEverything(socket,bufferedWriter,bufferedReader);
+            users.add(newName);
+
+            // Se il nome definitivo differisce da quello originale, informiamo il client.
+            if (!newName.equals(originalName)) {
+                bufferedWriter.write("SERVER:USERNAME_UPDATE-" + newName);
+                bufferedWriter.newLine();
+                bufferedWriter.flush();
+            }
+        } catch (IOException e) {
+            closeEverything(socket, bufferedWriter, bufferedReader);
         }
     }
+
+
 
     @Override
     public void run() {
         receiveMessage();
     }
+
     /**
      * Metodo che riceve i messaggi dal client mentre il socket è connesso
      */
-    public void receiveMessage(){
+    public void receiveMessage() {
         String messageFromClient;
 
-        while (socket.isConnected()){
-            try{
+        while (socket.isConnected()) {
+            try {
                 messageFromClient = bufferedReader.readLine();
-                if(messageFromClient==null) {
-                    System.out.println("SERVER: \""+ clientUserName +"\" disconnected");
+                System.out.println(messageFromClient);
+                if (messageFromClient == null) {
+                    System.out.println("SERVER: \"" + clientUserName + "\" disconnected");
                     closeEverything(socket, bufferedWriter, bufferedReader);
+                    break;
                 }
-                newPos = messageFromClient;
-                System.out.println(newPos);
-            }catch (IOException e){
-                closeEverything(socket,bufferedWriter,bufferedReader);
+                // Se il messaggio è boost, lo conserviamo in newPos (non aggiorniamo lastMove)
+                if (messageFromClient.equals("BOOST:1")) {
+                    isBoosting = true;  // Il client sta accelerando
+                } else if (messageFromClient.equals("BOOST:0")) {
+                    isBoosting = false;  // Il client ha smesso di accelerare
+                } else {
+                    newPos = messageFromClient;
+                    lastMove = messageFromClient;
+                }
 
+
+                System.out.println("[" + clientUserName + "] Command ricevuto: " + messageFromClient);
+            } catch (IOException e) {
+                closeEverything(socket, bufferedWriter, bufferedReader);
                 break;
             }
-        }
+            newPos = messageFromClient;
+            System.out.println(newPos);
+            }
     }
 
     /**
@@ -151,5 +185,14 @@ public class ClientHandler implements Runnable{
 
     public String getNewPos() {
         return newPos;
+    }
+
+    public void setNewPos(String pos) {
+        this.newPos = pos;
+    }
+
+    
+    public String getLastMove() {
+        return lastMove;
     }
 }

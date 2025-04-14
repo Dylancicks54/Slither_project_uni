@@ -1,13 +1,9 @@
 package view.GameViewer;
 
-import Net.Client;
-import Net.GameServer;
-import controller.OnlineGameController;
-import model.Food;
-import model.Pair;
-import Net.Serialize;
-import model.Snake;
-import view.ShowPreLobby;
+import Net.*;
+import controller.*;
+import model.*;
+import view.*;
 import javax.swing.*;
 import java.awt.*;
 import java.util.List;
@@ -26,6 +22,7 @@ public class ServerGameView extends GameView {
     private final Image[] foodImage;
     //Immagini del corpo dello snake
     private final Image snakeImage;
+
 
     public ServerGameView(Client client) {
         this.client=client;

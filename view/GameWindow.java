@@ -1,8 +1,7 @@
 package view;
 
-import Net.Client;
-import view.GameViewer.ServerGameView;
-import view.GameViewer.SoloGameView;
+import Net.*;
+import view.GameViewer.*;
 import javax.swing.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;

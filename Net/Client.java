@@ -1,6 +1,6 @@
 package Net;
 
-import view.ConnectionMenu;
+import view.*;
 import java.io.*;
 import java.net.Socket;
 /**
@@ -88,31 +88,38 @@ public class Client {
      * Metodo che legge i messaggi in arrivo dal server mentre il socket è attivo.
      * E' un metodo bloccante e quindi è necessario eseguire questo precesso su un thread separato per evitare di fermare il programma principale
      */
-    public void listenForMessage(){
-
-        while (socket.isConnected()){
+    public void listenForMessage() {
+        while (socket.isConnected()) {
             try {
-                messageFromServer=bufferedReader.readLine();
-                //DEBUG
-                System.out.println(messageFromServer);
+                messageFromServer = bufferedReader.readLine();
+                if (messageFromServer == null) {
+                    System.out.println("Connessione chiusa.");
+                    closeEverything(socket, bufferedWriter, bufferedReader);
+                    break;
+                }
 
-                //Se ricevo il messaggio di morte del player, chiudo l'esecuzione
-                if(messageFromServer.contains("SERVER")){
-                    System.out.println(messageFromServer);
-                    if(messageFromServer.contains("SERVER: you died!"))
-                        close();
+                // Gestione del messaggio per l'aggiornamento del nome utente
+                if (messageFromServer.startsWith("SERVER:USERNAME_UPDATE-")) {
+                    String updatedName = messageFromServer.split("-", 2)[1];
+                    System.out.println("Il tuo nome è stato aggiornato in: " + updatedName);
+                    userName = updatedName;
                     continue;
                 }
 
-                snakes=messageFromServer.split("&")[0];
-                //System.out.println(snakes);
-                foods=messageFromServer.split("&")[1];
-
-            }catch (IOException e){
-                closeEverything(socket,bufferedWriter,bufferedReader);
+                // Resto della logica per la ricezione degli aggiornamenti di gioco...
+                System.out.println(messageFromServer);
+                // Elaborazione degli snake e cibi
+                String[] parts = messageFromServer.split("&");
+                if (parts.length >= 2) {
+                    snakes = parts[0];
+                    foods = parts[1];
+                }
+            } catch (IOException e) {
+                closeEverything(socket, bufferedWriter, bufferedReader);
             }
         }
     }
+
 
     /**
      * Metodo per la chiusura del client

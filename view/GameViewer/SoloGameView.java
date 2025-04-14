@@ -1,10 +1,7 @@
 package view.GameViewer;
 
-import controller.GameController;
-import model.AISnake;
-import model.Food;
-import model.GameState;
-import model.Snake;
+import controller.*;
+import model.*;
 
 import java.awt.*;
 import javax.swing.*;

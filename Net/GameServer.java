@@ -1,12 +1,11 @@
 package Net;
 
-import model.Pair;
-import model.Snake;
-import model.SnakeBodyPart;
+import model.*;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 /**
- * this class handle the game serverside, responsible for logic and update every client connected
+ * questa classe gestisce il gioco serverside, responsabile per la logica e aggiorna ogni client collegato
  */
 public class GameServer {
     private volatile Map<ClientHandler,Snake> players;
@@ -15,11 +14,10 @@ public class GameServer {
 
     public static final int BORDER_X = 5000;
     public static final int BORDER_Y = 5000;
-    private static final int OFFSET_MAP_X = 50;
-    private static final int OFFSET_MAP_Y = 50;
-
-
+    private static final int OFFSET_MAP_X = 0;
+    private static final int OFFSET_MAP_Y = 0;
     public static final int MAX_FOOD = 1000;
+
 
     /**
      * Costruttore.
@@ -62,16 +60,26 @@ public class GameServer {
                     continue;
                 }
 
-                //MOVIMENTO DEL PLAYER
-                //Controllo se il player ha una nuova posizione dove si deve muovere
-                if(entry.getKey().getNewPos()==null)
-                    continue;
+                // Recupera il comando corrente; se è null, usa l'ultimo movimento conosciuto
+                String command = entry.getKey().getNewPos();
+                if (command == null) {
+                    command = entry.getKey().getLastMove();
+                    // Se anche lastMove risulta null, saltiamo l'iterazione
+                    if (command == null)
+                        continue;
+                }
 
+                // Gestione boost con protocollo BOOST:1 o BOOST:0
+                if (command.startsWith("BOOST:")) {
+                    boolean isBoosting = command.endsWith("1");
+                    entry.getValue().setAccelerating(isBoosting);
+                    entry.getKey().setNewPos(null);
+                    continue;
+                }
                 //Aggiorno la posizione
                 Pair newPos = stringToPos(entry.getKey().getNewPos(),entry.getKey().getClientUserName());
                 entry.getValue().move(newPos.getX(),newPos.getY());
-
-                //CONTROLLO COLLISIONI
+                 //CONTROLLO COLLISIONI
                 checkFoodCollision(entry.getValue());
                 playerCollided(entry);
                 borderCollision(entry);
@@ -95,9 +103,6 @@ public class GameServer {
         Random random = new Random();
         int foodX=random.nextInt(BORDER_X);
         int foodY=random.nextInt(BORDER_Y);
-
-        //int foodX=random.nextInt(1100)+x;
-        //int foodY=random.nextInt(700)+y;
 
         foods.add(new Pair(foodX,foodY));
     }
@@ -129,6 +134,7 @@ public class GameServer {
         player.getKey().close();
         explode(player.getValue());
         players.remove(player.getKey(),player.getValue());
+        server.removeUser(player.getKey().getClientUserName());
     }
 
     /**
@@ -174,9 +180,14 @@ public class GameServer {
      * @param playerEntry Entry della map ClientHandler-Snake
      * @return true se lo snake ha colliso con il bordo, false altrimenti
      */
-    public boolean borderCollision(Map.Entry<ClientHandler,Snake> playerEntry){
+
+    public boolean borderCollision(Map.Entry<ClientHandler, Snake> playerEntry) {
         SnakeBodyPart head = playerEntry.getValue().getBody().get(0);
-        if (Math.abs(head.getX())> (BORDER_X - Snake.SEGMENT_SIZE)||Math.abs(head.getY())> (BORDER_Y - Snake.SEGMENT_SIZE)){
+
+        // Il serpente deve stare entro (0, 0) e (5000 - SEGMENT_SIZE, 5000 - SEGMENT_SIZE)
+        if (head.getX() < 0 || head.getY() < 0 ||
+                head.getX() > (BORDER_X - Snake.SEGMENT_SIZE) ||
+                head.getY() > (BORDER_Y - Snake.SEGMENT_SIZE)) {
             die(playerEntry);
             return true;
         }

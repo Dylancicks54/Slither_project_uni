@@ -4,11 +4,12 @@ import Net.Client;
 import Net.Serialize;
 
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 
 /**
  * Controller per il gioco in multiplayer
  */
-public class OnlineGameController extends AbstractGameController {
+public class OnlineGameController extends AbstractGameController implements MouseListener {
 
     private Client client;
 
@@ -57,6 +58,4 @@ public class OnlineGameController extends AbstractGameController {
 
         client.write(Serialize.serializePlayerPos(mouseX, mouseY));
     }
-
-
 }

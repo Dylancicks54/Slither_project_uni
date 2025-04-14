@@ -1,5 +1,5 @@
 package model;
-import view.GameWindow;
+import view.*;
 
 import java.awt.*;
 import java.util.LinkedList;

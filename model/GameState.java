@@ -1,6 +1,6 @@
 package model;
 
-import controller.GameController;
+import controller.*;
 
 import java.util.*;
 import java.util.List;
@@ -46,7 +46,6 @@ public class GameState {
 
         //Inizializzo i contatori
         this.score = 0;
-        //@TODO non ho capito perchè si moltiplica per 40 e poi nel getter si divide per 40 per essere mostrato a video...
         this.remainingTime = MATCH_DURATION * 40;
 
         //Inizializzo i timer
@@ -449,8 +448,7 @@ public class GameState {
     public List<AISnake> getAiSnakes(){
         return aiSnakes;
     }
-
-    //@TODO si può riuscire a togliere/gestire questo /40 perchè non so come giustificarlo
+     //si divide per 40 per mantenere uniforme l'unità temporale confrontata con l'update dello stato di gioco
     public int getRemainingTime() {
         return (int)remainingTime/40;
     }

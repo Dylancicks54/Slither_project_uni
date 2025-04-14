@@ -1,5 +1,5 @@
 package view.GameViewer;
-import view.ShowPreLobby;
+import view.*;
 import javax.swing.*;
 import java.awt.*;
 /**

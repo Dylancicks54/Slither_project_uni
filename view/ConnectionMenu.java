@@ -1,6 +1,6 @@
 package view;
 
-import Net.Client;
+import Net.*;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
