@@ -39,8 +39,6 @@ public class GameController extends AbstractGameController implements KeyListene
             gameState.getSnake().setAccelerating(true);
         }
 
-        //B = RESETTARE LA PARTITA
-        //@TODO non funziona il resetGame()
         if (KeyEvent.VK_B == e.getKeyCode()) {
              gameState.resetGame();
         }

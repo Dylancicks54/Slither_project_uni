@@ -121,7 +121,7 @@ public class ConnectionMenu extends JFrame {
             }
         });
 
-        // Aggiungi i componenti
+        // Aggiungo i componenti
         add(titleLabel);
         add(hostAddress);
         add(usernameTextBox);

@@ -24,7 +24,6 @@ public class ClientHandler implements Runnable {
     private String newPos;
 
     private boolean isAlive;
-    private boolean isBoosting = false;
 
 
     /**
@@ -87,15 +86,8 @@ public class ClientHandler implements Runnable {
                     closeEverything(socket, bufferedWriter, bufferedReader);
                     break;
                 }
-                // Se il messaggio è boost, lo conserviamo in newPos (non aggiorniamo lastMove)
-                if (messageFromClient.equals("BOOST:1")) {
-                    isBoosting = true;  // Il client sta accelerando
-                } else if (messageFromClient.equals("BOOST:0")) {
-                    isBoosting = false;  // Il client ha smesso di accelerare
-                } else {
                     newPos = messageFromClient;
                     lastMove = messageFromClient;
-                }
 
 
                 System.out.println("[" + clientUserName + "] Command ricevuto: " + messageFromClient);
@@ -105,7 +97,7 @@ public class ClientHandler implements Runnable {
             }
             newPos = messageFromClient;
             System.out.println(newPos);
-            }
+        }
     }
 
     /**
@@ -191,7 +183,7 @@ public class ClientHandler implements Runnable {
         this.newPos = pos;
     }
 
-    
+
     public String getLastMove() {
         return lastMove;
     }

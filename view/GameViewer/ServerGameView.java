@@ -89,8 +89,7 @@ public class ServerGameView extends GameView {
 
                 //Disegno il cibo
                 for (Pair food : foods) {
-                    //Cambio il colore dipendente al valore di x, dando l'impressione di casualità nei colori
-                    //change color depending on x value, gives the impression of randomness in color
+                    //Cambio il colore in base al valore di x, dando l'impressione di casualità nei colori (gran furbata)
                     g.drawImage(foodImage[food.getX() % 4], food.getX() + offsetX, food.getY() + offsetY, Food.SIZE, Food.SIZE, this);
                 }
 

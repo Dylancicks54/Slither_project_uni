@@ -25,14 +25,9 @@ public class GameState {
 
     //Contatori
     private int remainingTime;
-    //private int countdownSeconds;
     private int score;
 
-    //@TODO valutare se tenere il magnetize visto che non funziona
     //Costanti
-    private static final int ATTRACT_DISTANCE = 50;
-    private static final int ATTRACT_SPEED = 2;
-
     public static final int BORDER_X = 1550;
     public static final int BORDER_Y = 1550;
     public static final int OFFSET_MAP_X = 50;
@@ -44,16 +39,13 @@ public class GameState {
     public GameState(GameController controller){
         this.controller=controller;
 
-        //Inizializzo i contatori
         this.score = 0;
         this.remainingTime = MATCH_DURATION * 40;
 
-        //Inizializzo i timer
         this.gameTimer=new Timer();
         this.foodTimer=new Timer();
         this.countdownTimer = new Timer();
 
-        //Inizializzo gli elenchi
         this.foods = new ArrayList<>();
         this.aiSnakes=new ArrayList<>();
 
@@ -68,7 +60,6 @@ public class GameState {
             aiSnakes.add(new AISnake(random.nextInt(getSpawnAreaX()), random.nextInt(getSpawnAreaX()),Direction.DOWN, foods));
         }
 
-        //Inizio il loop di gioco
         gameStart();
     }
 
@@ -88,7 +79,7 @@ public class GameState {
                 snake.move(snake.getMouseX(), snake.getMouseY());
 
                 //Muovo i bot
-                //Lavoro su una copia di foods per evitare il problema della concorrenza
+                //Lavoro su una copia di foods per evitare concorrenza
                 for (AISnake aiSnake : aiSnakes) {
                     aiSnake.moveAI((ArrayList<Food>) foods.clone());
                 }
@@ -134,7 +125,7 @@ public class GameState {
                             controller.getGameView().closeCurrentGameWindow();
                         }
                     }, 1000);
-                    return;
+
                 }
             }
         }, 0, 25);  // Aggiorna ogni 25ms
@@ -364,12 +355,12 @@ public class GameState {
             spawnY = random.nextInt(getSpawnAreaY());
             validPosition = true;
 
-            // Controllo se la posizione nuova collisione con il giocatore
+            // Controllo se la posizione nuova collide con il giocatore
             if (checkCollisionWithSnake(snake, spawnX, spawnY)) {
                 validPosition = false;
             }
 
-            // Controllo se la posizione nuova collisione con altri bot
+            // Controllo se la posizione nuova collide con altri bot
             for (AISnake aiSnake : aiSnakes) {
                 if (checkCollisionWithSnake(aiSnake, spawnX, spawnY)) {
                     validPosition = false;
@@ -377,7 +368,7 @@ public class GameState {
                 }
             }
 
-        } while (!validPosition); // Continua a generare finché non trovi una posizione libera
+        } while (!validPosition); // Continuo a generare finché non trovo una posizione libera
 
         return new AISnake(spawnX, spawnY,Direction.DOWN, foods);
     }

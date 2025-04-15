@@ -11,7 +11,7 @@ public class ShowPreLobby extends JFrame {
 
 
     public ShowPreLobby() {
-        // Configurazione della finestra (this)
+        // Configurazione della finestra
         setTitle("SLITHER.IO");
         setSize(700, 500);
         setLocationRelativeTo(null);
@@ -24,7 +24,7 @@ public class ShowPreLobby extends JFrame {
         JLabel backgroundLabel = new JLabel(background);
         backgroundLabel.setLayout(new BorderLayout());
 
-        // Creazione del pannello centrale (opzionale)
+        // Creazione del pannello centrale
         JPanel panel = new JPanel();
         panel.setOpaque(false);
         panel.setLayout(new GridBagLayout());

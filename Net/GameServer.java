@@ -12,6 +12,7 @@ public class GameServer {
     private final List<Pair> foods;
     private final Server server;
 
+    //Costanti
     public static final int BORDER_X = 5000;
     public static final int BORDER_Y = 5000;
     private static final int OFFSET_MAP_X = 0;
@@ -69,22 +70,15 @@ public class GameServer {
                         continue;
                 }
 
-                // Gestione boost con protocollo BOOST:1 o BOOST:0
-                if (command.startsWith("BOOST:")) {
-                    boolean isBoosting = command.endsWith("1");
-                    entry.getValue().setAccelerating(isBoosting);
-                    entry.getKey().setNewPos(null);
-                    continue;
-                }
                 //Aggiorno la posizione
                 Pair newPos = stringToPos(entry.getKey().getNewPos(),entry.getKey().getClientUserName());
                 entry.getValue().move(newPos.getX(),newPos.getY());
-                 //CONTROLLO COLLISIONI
+                //CONTROLLO COLLISIONI
                 checkFoodCollision(entry.getValue());
                 playerCollided(entry);
                 borderCollision(entry);
             }
-            sendPackeg();
+            sendPackage();
         }
     }
     /**
@@ -197,7 +191,7 @@ public class GameServer {
     /**
      * Metodo che manda il pacchetto contenente tutte le informazioni necessarie per la creeazione della vista per ogni client connesso
      */
-    public void sendPackeg(){
+    public void sendPackage(){
         StringBuilder stringBuilder = new StringBuilder();
 
         //SERIALIZE COORDINATE DEL CORPO DELLO SNAKE

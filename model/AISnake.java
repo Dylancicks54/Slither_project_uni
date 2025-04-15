@@ -26,8 +26,8 @@ public class AISnake extends Snake{
      */
     public void moveAI(ArrayList<Food> foods){
         SnakeBodyPart testa = getBody().get(0);
-        //Trovo il cibo più vicino
-        lookingTo = closestFood(foods);
+
+        lookingTo = closestFood(foods); //Trovo il cibo più vicino
 
         for (int i = getBody().size() - 1; i > 0; i--) {
             getBody().get(i).setX(getBody().get(i - 1).getX());
@@ -54,7 +54,7 @@ public class AISnake extends Snake{
         SnakeBodyPart testa = getBody().get(0);
         int closestFoodDistance =distance(closestFood.getX(),testa.getX(),closestFood.getY(), testa.getY());
 
-        //Prendo i cibi due a due, vedo quale dei due è più vicino e mi tengo da parte quello più vicino
+        //Prendo i cibi due a due, vedo guale dei due è più vicino e mi tengo da parte quello più vicino
         for(int i =0;i<foods.size()-2;i++){
             int foodDistance1 =distance(foods.get(i).getX(),testa.getX(),foods.get(i).getY(), testa.getY());
             int foodDistance2=distance(foods.get(i+1).getX(),testa.getX(),foods.get(i+1).getY(), testa.getY());

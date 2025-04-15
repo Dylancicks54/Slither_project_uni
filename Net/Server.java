@@ -101,7 +101,7 @@ public class Server {
     public void respond(){
         System.out.println("SERVER: Partita iniziata");
         while(!serverSocket.isClosed()){
-            try { //stable 60 ticks
+            try {
                 long start = System.currentTimeMillis();
                 Thread t= new Thread(gameServer::update);
                 t.start();
@@ -110,7 +110,7 @@ public class Server {
 
                 if(finish<17) //1000/60 = circa 17
                     t.sleep(17-(finish));
-            }catch (InterruptedException ignore){
+            }catch (InterruptedException ignora){
             }
         }
     }

@@ -23,19 +23,17 @@ public class OnlineGameController extends AbstractGameController implements Mous
      * @return array con le coordinate (x,y)
      */
     public int[] getPlayerPosition() {
-        // Estrai la posizione del giocatore dal messaggio del server
-        String snakesData = client.getSnakes();
+
+        String snakesData = client.getSnakes(); // Estrae la posizione del giocatore dal messaggio del server
         if (snakesData != null && !snakesData.isEmpty()) {
-            // Suddividi la stringa usando la virgola come separatore
-            String[] snakeParts = snakesData.split(",");
+            String[] snakeParts = snakesData.split(","); // usa la virgola come separatore
             int startIndex = 0;
-            // Se il primo elemento non contiene ":" probabilmente è un identificatore (es. "g")
-            if (snakeParts.length > 0 && !snakeParts[0].contains(":")) {
+            if (snakeParts.length > 0 && !snakeParts[0].contains(":")) { // Se il primo elemento non contiene ":" probabilmente è un identificatore (es. "g")
                 startIndex = 1;
             }
             if (snakeParts.length > startIndex) {
-                // Formato coordinate "x:y"
-                String[] coords = snakeParts[startIndex].split(":");
+
+                String[] coords = snakeParts[startIndex].split(":"); // Formato coordinate "x:y"
                 if (coords.length >= 2) {
                     try {
                         int x = Integer.parseInt(coords[0].trim());
@@ -47,8 +45,8 @@ public class OnlineGameController extends AbstractGameController implements Mous
                 }
             }
         }
-        // Valori di default se non ci sono dati validi
-        return new int[]{0, 0};
+
+        return new int[]{0, 0}; // Valori di default se non ci sono dati validi
     }
 
     @Override

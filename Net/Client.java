@@ -7,16 +7,13 @@ import java.net.Socket;
  * Classe che gestisce la comunicazione con il server a cui il client è connesso
  */
 public class Client {
-
     private Socket socket;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
     private String userName;
-
     //Dove vengo conservati gli oggetti di gioco serializzati
     private String snakes;
     private String foods;
-
     //Dove viene conservato il messaggio da deserializzare dal server
     private String messageFromServer;
 
@@ -106,8 +103,10 @@ public class Client {
                     continue;
                 }
 
-                // Resto della logica per la ricezione degli aggiornamenti di gioco...
-                System.out.println(messageFromServer);
+                // DEBUG
+                //System.out.println(messageFromServer);
+
+
                 // Elaborazione degli snake e cibi
                 String[] parts = messageFromServer.split("&");
                 if (parts.length >= 2) {
@@ -138,7 +137,6 @@ public class Client {
     public String getSnakes(){
         return snakes;
     }
-
     public String getUserName() {
         return userName;
     }

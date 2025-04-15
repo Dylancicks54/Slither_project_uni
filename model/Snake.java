@@ -1,7 +1,5 @@
 package model;
 import view.*;
-
-import java.awt.*;
 import java.util.LinkedList;
 
 /**
@@ -134,24 +132,12 @@ public class Snake {
         return (int)Math.round(Math.sqrt(x+y));
     }
 
-    public boolean isAccelerating() {
-        return isAccelerating;
-    }
 
     public void setAccelerating(boolean accelerating) {
         isAccelerating = accelerating;
     }
-
     public LinkedList<SnakeBodyPart> getBody(){
         return this.body;
-    }
-
-    public Direction getDirection() {
-        return direction;
-    }
-
-    public void setDirection(Direction direction) {
-        this.direction = direction;
     }
     public int getMouseX() {
         return mouseX;
@@ -159,7 +145,6 @@ public class Snake {
     public void setMouseX(int mouseX) {
         this.mouseX = mouseX;
     }
-
     public int getMouseY() {
         return mouseY;
     }
